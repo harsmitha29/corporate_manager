@@ -26,7 +26,7 @@ def admin_departments():
         SELECT d.id, d.dept_name, d.dept_code, d.description, d.is_active, d.created_at,
                COUNT(u.user_id) AS emp_count
         FROM tbl_departments d
-        LEFT JOIN tbl_users u ON u.dept_id=d.id AND LOWER(u.role_type)='employee'
+        LEFT JOIN tbl_users u ON u.dept_id=d.id AND LOWER(u.role_type)='employee' AND u.is_active=1
         GROUP BY d.id
         ORDER BY d.dept_name
     """)

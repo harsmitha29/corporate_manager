@@ -148,6 +148,24 @@ MIGRATION_SQL = [
     """ALTER TABLE tbl_attendance
        ADD CONSTRAINT uq_user_date UNIQUE (user_id, attendance_date);""",
 
+    # ── Task 2.3: Soft-delete support — is_active column on tbl_users ──
+    """ALTER TABLE tbl_users
+       ADD COLUMN is_active TINYINT(1) NOT NULL DEFAULT 1
+       AFTER employee_id;""",
+
+    # Back-fill existing rows so nothing breaks after the column is added
+    """UPDATE tbl_users SET is_active=1 WHERE is_active IS NULL;""",
+
+    # ── Task 2.6: Performance indexes ─────────────────────────────────
+    """ALTER TABLE tbl_attendance
+       ADD INDEX idx_att_date (attendance_date);""",
+
+    """ALTER TABLE tbl_leaves
+       ADD INDEX idx_leaves_status (status);""",
+
+    """ALTER TABLE tbl_regularizations
+       ADD INDEX idx_reg_status (status);""",
+
     # ── Company holidays ─────────────────────────────────────────────
     """CREATE TABLE IF NOT EXISTS tbl_company_holidays (
         id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

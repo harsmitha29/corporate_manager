@@ -36,5 +36,8 @@ class Config:
     ABSENT_CUTOFF_HOUR   = 23
     ABSENT_CUTOFF_MINUTE = 59
 
+    # Task 3.3: Face recognition toggle — set FACE_RECOGNITION_ENABLED=false in .env to bypass
+    FACE_RECOGNITION_ENABLED = os.environ.get("FACE_RECOGNITION_ENABLED", "true").lower() == "true"
+
 
 CFG = Config()

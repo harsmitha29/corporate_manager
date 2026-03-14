@@ -97,7 +97,7 @@ def auto_close_pending_checkouts_for_all_users() -> None:
     conn = get_db()
     cur  = conn.cursor(dictionary=True)
     try:
-        cur.execute("SELECT user_id FROM tbl_users WHERE LOWER(role_type)='employee'")
+        cur.execute("SELECT user_id FROM tbl_users WHERE LOWER(role_type)='employee' AND is_active=1")
         for user in cur.fetchall():
             uid = user["user_id"]
             cur.execute("""
@@ -247,7 +247,7 @@ def fill_missing_records_for_all_users() -> None:
     try:
         cur.execute(
             "SELECT user_id FROM tbl_users "
-            "WHERE LOWER(role_type)='employee' AND joining_date IS NOT NULL"
+            "WHERE LOWER(role_type)='employee' AND is_active=1 AND joining_date IS NOT NULL"
         )
         user_ids = [r["user_id"] for r in cur.fetchall()]
     finally:
@@ -267,7 +267,7 @@ def mark_absent_and_holidays_for_all_users() -> None:
     try:
         cur.execute("""
             SELECT user_id FROM tbl_users
-            WHERE LOWER(role_type)='employee'
+            WHERE LOWER(role_type)='employee' AND is_active=1
               AND joining_date IS NOT NULL
               AND joining_date <= %s
         """, (today,))

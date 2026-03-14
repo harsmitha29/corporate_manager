@@ -50,7 +50,7 @@ def api_team_report():
     try:
         cur.execute(
             "SELECT user_id,first_name,last_name FROM tbl_users "
-            "WHERE LOWER(role_type)='employee' AND joining_date IS NOT NULL"
+            "WHERE LOWER(role_type)='employee' AND is_active=1 AND joining_date IS NOT NULL"
         )
         employees = cur.fetchall()
     finally:
@@ -94,7 +94,7 @@ def api_admin_live_status():
             FROM tbl_users u
             LEFT JOIN tbl_departments d ON d.id=u.dept_id
             LEFT JOIN tbl_attendance a ON a.user_id=u.user_id AND a.attendance_date=%s
-            WHERE LOWER(u.role_type)='employee'
+            WHERE LOWER(u.role_type)='employee' AND u.is_active=1
             ORDER BY d.dept_name, u.first_name
         """, (today,))
         rows = cur.fetchall()

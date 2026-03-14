@@ -19,7 +19,7 @@ from config import CFG
 from extensions import get_db, logger
 from schema.models import today_local, now_local
 from services.utils import audit_log, login_required, admin_required, is_valid_name, is_valid_email, validate_password
-from services.attendance import fill_missing_records_for_user, fill_missing_records_for_all_users, calc_work_hours
+from services.attendance import fill_missing_records_for_user, calc_work_hours
 from services.leave import get_monthly_summary
 from services.holiday import is_working_day
 
@@ -29,7 +29,8 @@ admin_bp = Blueprint("admin", __name__)
 @admin_bp.route("/admin/panel")
 @admin_required
 def admin_panel():
-    fill_missing_records_for_all_users()
+    # Task 2.5: fill_missing_records_for_all_users() removed from here.
+    # It now runs only at startup and in the nightly scheduler.
     PER_PAGE    = 10
     page        = request.args.get("page", 1, type=int)
     year_filter = request.args.get("year", type=int)
@@ -42,11 +43,11 @@ def admin_panel():
 
     cur.execute(
         "SELECT DISTINCT YEAR(joining_date) AS year FROM tbl_users "
-        "WHERE LOWER(role_type)='employee' AND joining_date IS NOT NULL ORDER BY year DESC"
+        "WHERE LOWER(role_type)='employee' AND is_active=1 AND joining_date IS NOT NULL ORDER BY year DESC"
     )
     available_years = [r["year"] for r in cur.fetchall()]
 
-    where  = "LOWER(u.role_type)='employee'"
+    where  = "LOWER(u.role_type)='employee' AND u.is_active=1"
     params = []
     if year_filter:
         where += " AND YEAR(u.joining_date)=%s"
@@ -92,7 +93,7 @@ def admin_panel():
             SUM(status='On Leave') AS leave_count
         FROM tbl_attendance a
         JOIN tbl_users u ON u.user_id=a.user_id
-        WHERE a.attendance_date=%s AND LOWER(u.role_type)='employee'
+        WHERE a.attendance_date=%s AND LOWER(u.role_type)='employee' AND u.is_active=1
     """, (today,))
     stats = cur.fetchone() or {}
 
@@ -344,14 +345,28 @@ def delete_user(user_id):
         return redirect(url_for("admin.admin_panel"))
     conn = get_db()
     cur  = conn.cursor()
-    cur.execute("DELETE FROM tbl_attendance      WHERE user_id=%s", (user_id,))
-    cur.execute("DELETE FROM tbl_daily_updates   WHERE user_id=%s", (user_id,))
-    cur.execute("DELETE FROM tbl_leaves          WHERE user_id=%s", (user_id,))
-    cur.execute("DELETE FROM tbl_self_assessment WHERE user_id=%s", (user_id,))
-    cur.execute("DELETE FROM tbl_users           WHERE user_id=%s", (user_id,))
-    conn.commit()
-    audit_log(conn, session["user_id"], "DELETE_USER", f"deleted_user_id={user_id}")
-    conn.commit()
-    cur.close(); conn.close()
-    flash("User deleted successfully", "success")
+    try:
+        # Task 2.3: soft-delete — set is_active=0, do NOT hard-delete the user row
+        cur.execute(
+            "UPDATE tbl_users SET is_active=0 WHERE user_id=%s",
+            (user_id,),
+        )
+        # Task 2.4: remove related records inside a single transaction;
+        # add previously missing tbl_regularizations and tbl_appraisal deletes
+        cur.execute("DELETE FROM tbl_attendance        WHERE user_id=%s", (user_id,))
+        cur.execute("DELETE FROM tbl_daily_updates     WHERE user_id=%s", (user_id,))
+        cur.execute("DELETE FROM tbl_leaves            WHERE user_id=%s", (user_id,))
+        cur.execute("DELETE FROM tbl_self_assessment   WHERE user_id=%s", (user_id,))
+        cur.execute("DELETE FROM tbl_regularizations   WHERE user_id=%s", (user_id,))  # was missing
+        cur.execute("DELETE FROM tbl_appraisal         WHERE user_id=%s", (user_id,))  # was missing
+        conn.commit()
+        audit_log(conn, session["user_id"], "SOFT_DELETE_USER", f"deactivated_user_id={user_id}")
+        conn.commit()
+        flash("User deactivated successfully", "success")
+    except Exception as exc:
+        conn.rollback()
+        logger.error("delete_user(%s) failed: %s", user_id, exc)
+        flash("Failed to deactivate user. Please try again.", "danger")
+    finally:
+        cur.close(); conn.close()
     return redirect(url_for("admin.admin_panel"))

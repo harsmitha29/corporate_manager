@@ -2,8 +2,7 @@
 api/attendance.py
 Attendance routes:
   GET  /user/dashboard
-  GET  /stream/attendance-status  (SSE)
-  GET  /get-attendance-status
+  GET  /get-attendance-status          (replaces SSE — Task 3.6)
   POST /check_in
   POST /checkout
   GET  /face-auth/<action>
@@ -13,6 +12,9 @@ Attendance routes:
   GET  /admin/attendance-overview
   GET  /admin/team-summary
   GET  /admin/run-nightly-job
+
+NOTE (Task 3.6): /stream/attendance-status (SSE — 120 DB hits/2min) removed.
+                 Replaced by JS polling /get-attendance-status every 10s.
 """
 import csv
 import io
@@ -52,6 +54,9 @@ except ImportError:
 
 attendance_bp = Blueprint("attendance", __name__)
 
+# ── Face recognition constants ────────────────────────────────────────
+FACE_RETRY_LIMIT = 3   # Task 3.2: max attempts before forced re-login
+
 
 # ── User Dashboard ───────────────────────────────────────────────────
 @attendance_bp.route("/user/dashboard")
@@ -66,64 +71,64 @@ def user_dashboard():
     per_page = 10
     offset   = (page - 1) * per_page
 
+    # Task 3.1: single DB connection for all queries (was two sequential connections)
     conn = get_db()
     cur  = conn.cursor(dictionary=True)
+    try:
+        cur.execute("""
+            SELECT a.attendance_date, a.status, a.check_in, a.check_out,
+                   du.work_summary,
+                   ROUND(
+                     CASE WHEN a.check_in IS NOT NULL AND a.check_out IS NOT NULL
+                          THEN TIMESTAMPDIFF(MINUTE,
+                                 CAST(CONCAT(a.attendance_date,' ',a.check_in)  AS DATETIME),
+                                 CAST(CONCAT(a.attendance_date,' ',a.check_out) AS DATETIME)
+                               ) / 60.0
+                          ELSE NULL END, 2
+                   ) AS hours_worked
+            FROM tbl_attendance a
+            LEFT JOIN tbl_daily_updates du ON a.user_id=du.user_id AND a.attendance_date=du.update_date
+            WHERE a.user_id=%s
+            ORDER BY a.attendance_date DESC
+            LIMIT %s OFFSET %s
+        """, (user_id, per_page, offset))
+        attendance = cur.fetchall()
 
-    cur.execute("""
-        SELECT a.attendance_date, a.status, a.check_in, a.check_out,
-               du.work_summary,
-               ROUND(
-                 CASE WHEN a.check_in IS NOT NULL AND a.check_out IS NOT NULL
-                      THEN TIMESTAMPDIFF(MINUTE,
-                             CAST(CONCAT(a.attendance_date,' ',a.check_in)  AS DATETIME),
-                             CAST(CONCAT(a.attendance_date,' ',a.check_out) AS DATETIME)
-                           ) / 60.0
-                      ELSE NULL END, 2
-               ) AS hours_worked
-        FROM tbl_attendance a
-        LEFT JOIN tbl_daily_updates du ON a.user_id=du.user_id AND a.attendance_date=du.update_date
-        WHERE a.user_id=%s
-        ORDER BY a.attendance_date DESC
-        LIMIT %s OFFSET %s
-    """, (user_id, per_page, offset))
-    attendance = cur.fetchall()
+        cur.execute("SELECT COUNT(*) AS total FROM tbl_attendance WHERE user_id=%s", (user_id,))
+        total_pages = ceil(cur.fetchone()["total"] / per_page) or 1
 
-    cur.execute("SELECT COUNT(*) AS total FROM tbl_attendance WHERE user_id=%s", (user_id,))
-    total_pages = ceil(cur.fetchone()["total"] / per_page) or 1
+        cur.execute("""
+            SELECT a.attendance_date, a.status, a.check_in, a.check_out, du.work_summary
+            FROM tbl_attendance a
+            LEFT JOIN tbl_daily_updates du ON a.user_id=du.user_id AND a.attendance_date=du.update_date
+            WHERE a.user_id=%s AND a.attendance_date=%s LIMIT 1
+        """, (user_id, today))
+        today_attendance = cur.fetchone()
 
-    cur.execute("""
-        SELECT a.attendance_date, a.status, a.check_in, a.check_out, du.work_summary
-        FROM tbl_attendance a
-        LEFT JOIN tbl_daily_updates du ON a.user_id=du.user_id AND a.attendance_date=du.update_date
-        WHERE a.user_id=%s AND a.attendance_date=%s LIMIT 1
-    """, (user_id, today))
-    today_attendance = cur.fetchone()
+        cur.execute(
+            "SELECT u.first_name, u.last_name, u.email, u.joining_date, "
+            "u.designation, u.employee_id, d.dept_name "
+            "FROM tbl_users u LEFT JOIN tbl_departments d ON d.id=u.dept_id "
+            "WHERE u.user_id=%s", (user_id,)
+        )
+        emp_info = cur.fetchone() or {}
 
-    cur.execute(
-        "SELECT u.first_name, u.last_name, u.email, u.joining_date, "
-        "u.designation, u.employee_id, d.dept_name "
-        "FROM tbl_users u LEFT JOIN tbl_departments d ON d.id=u.dept_id "
-        "WHERE u.user_id=%s", (user_id,)
-    )
-    emp_info = cur.fetchone() or {}
-    cur.close(); conn.close()
+        # Task 3.1: assessment query reused from same connection (was conn2)
+        cur.execute("""
+            SELECT sa.cycle_number, sa.employee_rating, sa.employee_comment,
+                   sa.admin_rating, sa.admin_comment, sa.status,
+                   ap.appraisal_points
+            FROM tbl_self_assessment sa
+            LEFT JOIN tbl_appraisal ap ON ap.user_id=sa.user_id AND ap.cycle_number=sa.cycle_number
+            WHERE sa.user_id=%s
+            ORDER BY sa.cycle_number DESC LIMIT 1
+        """, (user_id,))
+        latest_assessment = cur.fetchone()
+    finally:
+        cur.close(); conn.close()
 
     leave_balance = get_leave_balance(user_id, today.year)
     monthly       = get_monthly_summary(user_id, today.year, today.month)
-
-    conn2 = get_db()
-    cur2  = conn2.cursor(dictionary=True)
-    cur2.execute("""
-        SELECT sa.cycle_number, sa.employee_rating, sa.employee_comment,
-               sa.admin_rating, sa.admin_comment, sa.status,
-               ap.appraisal_points
-        FROM tbl_self_assessment sa
-        LEFT JOIN tbl_appraisal ap ON ap.user_id=sa.user_id AND ap.cycle_number=sa.cycle_number
-        WHERE sa.user_id=%s
-        ORDER BY sa.cycle_number DESC LIMIT 1
-    """, (user_id,))
-    latest_assessment = cur2.fetchone()
-    cur2.close(); conn2.close()
 
     return render_template(
         "user_dashboard.html",
@@ -172,31 +177,74 @@ def _get_status_dict(user_id: int) -> dict:
         cur.close(); conn.close()
 
 
+# Task 3.6: simple polling endpoint — replaces the SSE stream
 @attendance_bp.route("/get-attendance-status")
 @login_required
 def get_attendance_status():
     return jsonify(_get_status_dict(session["user_id"]))
 
 
+# Task 3.6: SSE endpoint kept as stub so any bookmarked URL doesn't 404,
+# but it immediately ends the stream to prevent the 120-hit DB flood.
 @attendance_bp.route("/stream/attendance-status")
 @login_required
 def stream_attendance_status():
-    user_id = session["user_id"]
-
+    """Deprecated — kept to avoid 404 on old bookmarks. Use /get-attendance-status instead."""
     def generate():
-        last_status = None
-        for _ in range(120):
-            payload = json.dumps(_get_status_dict(user_id))
-            if payload != last_status:
-                yield f"data: {payload}\n\n"
-                last_status = payload
-            time.sleep(1)
+        payload = json.dumps(_get_status_dict(session["user_id"]))
+        yield f"data: {payload}\n\n"
         yield 'data: {"status": "stream_end"}\n\n'
 
     return Response(
         stream_with_context(generate()),
         mimetype="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+# ── Face recognition helper ───────────────────────────────────────────
+def _verify_face(img_b64: str, user_id: int):
+    """
+    Task 3.2 & 3.3: Centralised face verification.
+    Returns (True, None) on success.
+    Returns (False, response) on failure — caller must return the response immediately.
+    Manages retry counter in session; forces re-login after FACE_RETRY_LIMIT failures.
+    """
+    # Task 3.3: bypass if disabled in config
+    if not CFG.FACE_RECOGNITION_ENABLED:
+        return True, None
+
+    if recognize_user_face_from_base64 is None:
+        return False, api_err("Face recognition not available on this server.", 503)
+
+    try:
+        recognised = recognize_user_face_from_base64(img_b64, user_id)
+    except Exception:
+        logger.exception("Face recognition service error for user %s", user_id)
+        return False, api_err("Face recognition service error", 500)
+
+    if recognised:
+        # Reset retry counter on success
+        session.pop("face_retry_count", None)
+        return True, None
+
+    # Task 3.2: increment retry counter instead of session.clear()
+    count = session.get("face_retry_count", 0) + 1
+    session["face_retry_count"] = count
+    attempts_left = max(FACE_RETRY_LIMIT - count, 0)
+
+    if count >= FACE_RETRY_LIMIT:
+        session.clear()   # only clear after exhausting all retries
+        return False, api_err(
+            "Face not recognised. Too many failed attempts.",
+            401,
+            {"status": "unauthorized", "redirect": url_for("auth.login")}
+        )
+
+    return False, api_err(
+        f"Face not recognised. {attempts_left} attempt(s) left.",
+        401,
+        {"status": "retry", "attempts_left": attempts_left}
     )
 
 
@@ -225,6 +273,9 @@ def check_in():
                     (user_id, today, day_status)
                 )
                 conn.commit()
+        except Exception:
+            conn.rollback()
+            logger.exception("Holiday record insert failed")
         finally:
             cur.close(); conn.close()
         return api_ok({"status": "holiday"}, f"Today is {label}. Attendance not required.")
@@ -234,15 +285,10 @@ def check_in():
     if not img:
         return api_err("No image provided")
 
-    if recognize_user_face_from_base64 is None:
-        return api_err("Face recognition not available", 500)
-    try:
-        if not recognize_user_face_from_base64(img, user_id):
-            session.clear()
-            return api_err("Face not recognised.", 401, {"redirect": url_for("auth.login")})
-    except Exception:
-        logger.exception("Face recognition failed")
-        return api_err("Face recognition service error", 500)
+    # Task 3.2 / 3.3: use centralised face verification helper
+    ok, err_response = _verify_face(img, user_id)
+    if not ok:
+        return err_response
 
     conn = get_db()
     cur  = conn.cursor(dictionary=True)
@@ -300,6 +346,7 @@ def check_in():
         if late:
             msg += f" (Late — grace {CFG.GRACE_MINUTES}min after {CFG.WORK_START_HOUR:02d}:{CFG.WORK_START_MINUTE:02d})"
         return api_ok({"status": "success", "late": late}, msg)
+
     except Exception:
         conn.rollback()
         logger.exception("Check-in failed for user %s", user_id)
@@ -322,15 +369,10 @@ def checkout():
     if not img:
         return api_err("No image provided")
 
-    if recognize_user_face_from_base64 is None:
-        return api_err("Face recognition not available", 500)
-    try:
-        if not recognize_user_face_from_base64(img, user_id):
-            session.clear()
-            return api_err("Face not recognised.", 401, {"redirect": url_for("auth.login")})
-    except Exception:
-        logger.exception("Face recognition failed")
-        return api_err("Face recognition service error", 500)
+    # Task 3.2 / 3.3: use centralised face verification helper (removed redundant session.clear())
+    ok, err_response = _verify_face(img, user_id)
+    if not ok:
+        return err_response
 
     now_str = now_local().strftime("%H:%M:%S")
     conn    = get_db()
@@ -413,7 +455,7 @@ def face_auth(action):
     return render_template("face_auth.html", action=action)
 
 
-# ── WFH check-in / check-out ─────────────────────────────────────────
+# ── WFH check-in ─────────────────────────────────────────────────────
 @csrf.exempt
 @attendance_bp.route("/attendance/wfh", methods=["POST"])
 @login_required
@@ -465,7 +507,7 @@ def mark_wfh():
         cur.close(); conn.close()
 
 
-@csrf.exempt
+# ── WFH check-out ─────────────────────────────────────────────────────
 @csrf.exempt
 @attendance_bp.route("/attendance/wfh-checkout", methods=["POST"])
 @login_required
@@ -482,18 +524,24 @@ def wfh_checkout():
             "WHERE user_id=%s AND attendance_date=%s", (user_id, today)
         )
         rec = cur.fetchone()
+
         if not rec or not rec["check_in"]:
             return api_err("Please check in first")
         if rec["check_out"]:
             return api_err("Already checked out", 409)
-        if rec["work_type"] != "wfh":
-            return api_err("This endpoint is for WFH only", 400)
+
+        # Task 3.5: fix work_type=NULL edge case — allow WFH checkout if work_type is
+        # 'wfh' OR NULL (NULL can happen if WFH was set before work_type column existed)
+        if rec["work_type"] is not None and rec["work_type"] != "wfh":
+            return api_err(
+                "This endpoint is for WFH only. Please use the face-auth checkout instead.", 400
+            )
 
         final_status = derive_status(str(rec["check_in"]), now_str)
         hours        = calc_work_hours(str(rec["check_in"]), now_str)
         overtime     = max(round(hours - CFG.MIN_WORK_HOURS, 2), 0.0)
         cur.execute(
-            "UPDATE tbl_attendance SET check_out=%s, status=%s, overtime_hours=%s WHERE id=%s",
+            "UPDATE tbl_attendance SET check_out=%s, status=%s, overtime_hours=%s, work_type='wfh' WHERE id=%s",
             (now_str, final_status, overtime, rec["id"])
         )
         conn.commit()
@@ -603,7 +651,7 @@ def admin_attendance_overview():
             FROM tbl_users u
             LEFT JOIN tbl_departments d ON d.id=u.dept_id
             LEFT JOIN tbl_attendance a ON a.user_id=u.user_id AND a.attendance_date=%s
-            WHERE LOWER(u.role_type)='employee'
+            WHERE LOWER(u.role_type)='employee' AND u.is_active=1
             ORDER BY d.dept_name, u.first_name
         """, (view_date_str, view_date_str, view_date))
         employees = cur.fetchall()
@@ -642,7 +690,7 @@ def admin_team_summary():
     try:
         cur.execute(
             "SELECT user_id, first_name, last_name, employee_id "
-            "FROM tbl_users WHERE LOWER(role_type)='employee' ORDER BY first_name"
+            "FROM tbl_users WHERE LOWER(role_type)='employee' AND is_active=1 ORDER BY first_name"
         )
         employees = cur.fetchall()
         months    = []

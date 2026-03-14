@@ -4,152 +4,84 @@
     <meta charset="UTF-8">
     <title>Face Verification</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-
     <style>
 body {
-    height: 100vh;
-    margin: 0;
+    height: 100vh; margin: 0;
     font-family: 'Inter', sans-serif;
     background: linear-gradient(135deg, #1e3a8a, #0f172a);
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    display: flex; justify-content: center; align-items: center;
 }
-
 .glass-card {
-    width: 420px;
-    padding: 32px;
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.95);
+    width: 420px; padding: 32px; border-radius: 18px;
+    background: rgba(255,255,255,0.95);
     box-shadow: 0 30px 70px rgba(0,0,0,0.3);
-    text-align: center;
-    color: #1e293b;
+    text-align: center; color: #1e293b;
 }
-
 .scan-wrapper {
-    width: 240px;
-    height: 240px;
-    border-radius: 50%;
-    background: #f8fafc;
-    margin: 22px auto;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    width: 240px; height: 240px; border-radius: 50%;
+    background: #f8fafc; margin: 22px auto; position: relative;
+    display: flex; align-items: center; justify-content: center;
 }
-
 video {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 50%;
-    border: 4px solid #cbd5e1;
+    width: 100%; height: 100%; object-fit: cover;
+    border-radius: 50%; border: 4px solid #cbd5e1;
 }
-
 .scan-wrapper::before {
-    content: "";
-    position: absolute;
-    inset: -12px;
-    border-radius: 50%;
+    content: ""; position: absolute; inset: -12px; border-radius: 50%;
     border: 3px solid #3b82f6;
     animation: scanPulse 1.6s ease-in-out infinite;
 }
-
 @keyframes scanPulse {
     0%   { opacity: 0.35; }
     50%  { opacity: 1; }
     100% { opacity: 0.35; }
 }
+.success::before { border-color: #22c55e; animation: none; box-shadow: 0 0 25px rgba(34,197,94,0.8); }
+.error::before   { border-color: #ef4444; animation: none; box-shadow: 0 0 25px rgba(239,68,68,0.8); }
+.warning::before { border-color: #f59e0b; animation: none; box-shadow: 0 0 25px rgba(245,158,11,0.8); }
 
-.success::before {
-    border-color: #22c55e;
-    animation: none;
-    box-shadow: 0 0 25px rgba(34,197,94,0.8);
-}
+.status-text { margin-top: 14px; font-size: 15px; color: #475569; }
 
-.error::before {
-    border-color: #ef4444;
-    animation: none;
-    box-shadow: 0 0 25px rgba(239,68,68,0.8);
-}
-
-.warning::before {
-    border-color: #f59e0b;
-    animation: none;
-    box-shadow: 0 0 25px rgba(245,158,11,0.8);
-}
-
-.status-text {
-    margin-top: 14px;
-    font-size: 15px;
-    color: #475569;
+/* Retry badge */
+.retry-badge {
+    display: inline-block; margin-top: 10px;
+    background: #fef3c7; color: #92400e;
+    border-radius: 999px; padding: 4px 14px; font-size: 13px; font-weight: 600;
 }
 
 .popup-overlay {
-    visibility: hidden;
-    opacity: 0;
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0,0,0,0.55);
-    backdrop-filter: blur(5px);
-    z-index: 9999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    visibility: hidden; opacity: 0;
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    width: 100vw; height: 100vh;
+    background: rgba(0,0,0,0.55); backdrop-filter: blur(5px);
+    z-index: 9999; display: flex; align-items: center; justify-content: center;
     transition: opacity 0.25s ease, visibility 0.25s ease;
 }
-.popup-overlay.show {
-    visibility: visible;
-    opacity: 1;
-}
-
+.popup-overlay.show { visibility: visible; opacity: 1; }
 .popup-box {
-    background: #fff;
-    border-radius: 20px;
-    padding: 40px 36px 32px;
-    width: 340px;
-    text-align: center;
+    background: #fff; border-radius: 20px; padding: 40px 36px 32px;
+    width: 340px; text-align: center;
     box-shadow: 0 24px 60px rgba(0,0,0,0.3);
     animation: popIn 0.35s cubic-bezier(0.34,1.56,0.64,1);
-    position: relative;
 }
-
 @keyframes popIn {
     from { transform: scale(0.6); opacity: 0; }
     to   { transform: scale(1);   opacity: 1; }
 }
-
 .popup-icon {
-    width: 72px; height: 72px;
-    border-radius: 50%;
+    width: 72px; height: 72px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-size: 2rem;
-    margin: 0 auto 16px;
+    font-size: 2rem; margin: 0 auto 16px;
 }
 .popup-icon.success { background: #dcfce7; }
 .popup-icon.danger  { background: #fee2e2; }
 .popup-icon.warning { background: #fef3c7; }
 .popup-icon.info    { background: #e0f2fe; }
-
-.popup-box h3 {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: #1e293b;
-    margin-bottom: 8px;
-}
-
-.popup-box p {
-    font-size: 0.875rem;
-    color: #64748b;
-    line-height: 1.6;
-    margin-bottom: 0;
-}
+.popup-box h3 { font-size: 1.2rem; font-weight: 700; color: #1e293b; margin-bottom: 8px; }
+.popup-box p  { font-size: 0.875rem; color: #64748b; line-height: 1.6; margin-bottom: 0; }
 
 .scanning-dots::after {
-    content: '';
-    animation: dots 1.5s steps(4, end) infinite;
+    content: ''; animation: dots 1.5s steps(4, end) infinite;
 }
 @keyframes dots {
     0%   { content: ''; }
@@ -160,7 +92,6 @@ video {
 }
     </style>
 </head>
-
 <body>
 
 <div class="glass-card">
@@ -174,6 +105,8 @@ video {
     <div id="statusText" class="status-text">
         <span class="scanning-dots">Scanning</span>
     </div>
+    <!-- Task 3.2: retry counter badge — hidden until a face-not-recognised occurs -->
+    <div id="retryBadge" class="retry-badge" style="display:none;"></div>
 
     <audio id="successSound" src="{{ url_for('static', filename='sounds/success.mp3') }}"></audio>
     <audio id="errorSound"   src="{{ url_for('static', filename='sounds/error.mp3') }}"></audio>
@@ -188,7 +121,7 @@ video {
     </div>
 </div>
 
-<!-- ── POPUP: Auto Check-In (checkout + checkin in one scan) ── -->
+<!-- ── POPUP: Auto Check-In ── -->
 <div class="popup-overlay" id="popAutoCheckin">
     <div class="popup-box">
         <div class="popup-icon success">✅</div>
@@ -197,12 +130,21 @@ video {
     </div>
 </div>
 
-<!-- ── POPUP: Invalid User ── -->
+<!-- ── POPUP: Too Many Failed Attempts ── -->
 <div class="popup-overlay" id="popFail">
     <div class="popup-box">
         <div class="popup-icon danger">❌</div>
-        <h3>Invalid User</h3>
-        <p>Face not recognized. Redirecting to login...</p>
+        <h3>Too Many Attempts</h3>
+        <p>Face not recognized after multiple tries. Redirecting to login...</p>
+    </div>
+</div>
+
+<!-- ── POPUP: Retry (face not recognised, attempts remaining) ── -->
+<div class="popup-overlay" id="popRetry">
+    <div class="popup-box">
+        <div class="popup-icon warning">👤</div>
+        <h3>Face Not Recognised</h3>
+        <p id="retryMsg">Please reposition your face and try again.</p>
     </div>
 </div>
 
@@ -248,6 +190,7 @@ video {
 const video        = document.getElementById("video");
 const statusText   = document.getElementById("statusText");
 const scanRing     = document.getElementById("scanRing");
+const retryBadge   = document.getElementById("retryBadge");
 const successSound = document.getElementById("successSound");
 const errorSound   = document.getElementById("errorSound");
 
@@ -260,13 +203,19 @@ const MAX_TIME      = 60 * 1000;
 const SCAN_INTERVAL = 3000;
 const endpoint = "{{ '/check_in' if action == 'checkin' else '/checkout' }}";
 
-/* ── Show popup then redirect ── */
+// Task 3.6: polling interval for /get-attendance-status (10s), started after a terminal success
+let statusPollTimer = null;
+
 function showPopup(id, delay, redirectUrl) {
     const overlay = document.getElementById(id);
     overlay.classList.add("show");
-    setTimeout(() => {
-        if (redirectUrl) window.location.href = redirectUrl;
-    }, 1200);
+    if (redirectUrl) {
+        setTimeout(() => { window.location.href = redirectUrl; }, delay || 1200);
+    }
+}
+
+function hidePopup(id) {
+    document.getElementById(id).classList.remove("show");
 }
 
 /* ── Camera ── */
@@ -289,10 +238,22 @@ function captureImage() {
 }
 
 function stopCamera() {
-    if (stream) {
-        stream.getTracks().forEach(t => t.stop());
-        stream = null;
-    }
+    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+}
+
+/* ── Task 3.6: poll /get-attendance-status every 10s after success ── */
+function startStatusPolling(redirectUrl) {
+    statusPollTimer = setInterval(async () => {
+        try {
+            const res  = await fetch("/get-attendance-status");
+            const data = await res.json();
+            // If the server confirms the status matches what we recorded, redirect
+            if (["completed", "checked_in"].includes(data.status)) {
+                clearInterval(statusPollTimer);
+                window.location.href = redirectUrl;
+            }
+        } catch (_) { /* network blip — ignore, keep polling */ }
+    }, 10000);
 }
 
 /* ── Main scanning loop ── */
@@ -317,16 +278,16 @@ function startScanning() {
         }
 
         try {
-            const image = captureImage();
+            const image    = captureImage();
             const response = await fetch(endpoint, {
-                method: "POST",
+                method:  "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ image })
+                body:    JSON.stringify({ image })
             });
 
             const data = await response.json();
 
-            // ── Terminal states — stop scanning once any of these hit ──
+            // Terminal success states — stop scanning
             if (["success", "auto_checkin", "holiday", "already_checked_in",
                  "already_done", "unauthorized", "pending_checkout"].includes(data.status)) {
                 finished = true;
@@ -341,17 +302,36 @@ function startScanning() {
                 successSound.play();
                 document.getElementById("successMsg").innerText = data.message || "Attendance marked successfully.";
                 showPopup("popSuccess", 2000, "/user/dashboard");
+                startStatusPolling("/user/dashboard");  // Task 3.6: confirm via poll
 
-            // ── AUTO CHECKIN (pending closed + today checked in — one scan) ──
+            // ── AUTO CHECKIN ──
             } else if (data.status === "auto_checkin") {
                 scanRing.classList.add("success");
                 statusText.innerText = data.message || "All done!";
                 successSound.play();
-                document.getElementById("autoCheckinMsg").innerText = data.message || "Previous day closed and today checked in.";
+                document.getElementById("autoCheckinMsg").innerText = data.message;
                 showPopup("popAutoCheckin", 2000, "/user/dashboard");
 
-            // ── UNAUTHORIZED ──
+            // ── Task 3.2: RETRY — face not recognised, attempts remaining ──
+            } else if (data.status === "retry") {
+                const left = data.attempts_left ?? "?";
+                retryBadge.style.display = "inline-block";
+                retryBadge.innerText = `⚠️ ${left} attempt(s) left`;
+                statusText.innerText = "Face not recognised — please reposition";
+                errorSound.play();
+                document.getElementById("retryMsg").innerText =
+                    `Face not recognised. You have ${left} attempt(s) remaining.`;
+                showPopup("popRetry", 0, null);
+                // Auto-hide retry popup after 2s and resume scanning
+                setTimeout(() => hidePopup("popRetry"), 2000);
+                // Don't set finished=true — keep scanning
+
+            // ── UNAUTHORIZED (retries exhausted — force logout) ──
             } else if (data.status === "unauthorized") {
+                finished = true;
+                clearInterval(scanTimer);
+                stopCamera();
+                retryBadge.style.display = "none";
                 scanRing.classList.add("error");
                 statusText.innerText = "Face not recognized.";
                 errorSound.play();
@@ -363,7 +343,7 @@ function startScanning() {
                 statusText.innerText = data.message;
                 errorSound.play();
                 document.getElementById("alreadyTitle").innerText = "Already Checked In";
-                document.getElementById("alreadyMsg").innerText = data.message;
+                document.getElementById("alreadyMsg").innerText   = data.message;
                 showPopup("popAlready", 2500, "/user/dashboard");
 
             // ── ALREADY COMPLETED ──
@@ -372,34 +352,30 @@ function startScanning() {
                 statusText.innerText = data.message;
                 errorSound.play();
                 document.getElementById("alreadyTitle").innerText = "Already Completed";
-                document.getElementById("alreadyMsg").innerText = data.message;
+                document.getElementById("alreadyMsg").innerText   = data.message;
                 showPopup("popAlready", 2500, "/user/dashboard");
 
             // ── HOLIDAY / WEEKEND ──
             } else if (data.status === "holiday") {
                 const msg = data.message || "No attendance required today.";
-                const isWeekend = msg.toLowerCase().includes("weekend");
                 scanRing.classList.add("warning");
                 statusText.innerText = msg;
-                document.getElementById("holidayTitle").innerText = isWeekend ? "It's the Weekend! 🏖️" : "Public Holiday 🎉";
+                document.getElementById("holidayTitle").innerText = msg.toLowerCase().includes("weekend")
+                    ? "It's the Weekend! 🏖️" : "Public Holiday 🎉";
                 document.getElementById("holidayMsg").innerText = msg;
                 showPopup("popHoliday", 3000, "/user/dashboard");
 
-            // ── PENDING CHECKOUT (normal working day — must manually checkout) ──
+            // ── PENDING CHECKOUT ──
             } else if (data.status === "pending_checkout") {
                 const msg = data.message || "Please check out for a previous day first.";
                 scanRing.classList.add("warning");
                 statusText.innerText = msg;
                 errorSound.play();
                 document.getElementById("pendingMsg").innerText = msg;
-
                 if (endpoint.includes("check_in")) {
-                    // Tried to check in but has a pending normal-day checkout
-                    // → redirect to checkout page to resolve it
                     showPopup("popPending", 3000, "/face-auth/checkout");
                 } else {
-                    // Already on checkout page — backend will handle it, keep scanning
-                    finished = false;
+                    finished = false; // keep scanning on checkout page
                 }
 
             // ── TRANSIENT ERROR — keep scanning ──

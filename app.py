@@ -40,59 +40,68 @@ from services.attendance import (
 from api import register_blueprints
 
 
-# ── Create Flask app ─────────────────────────────────────────────────
 BASE_DIR         = os.path.dirname(os.path.abspath(__file__))
 FACE_DATASET_DIR = os.path.join(BASE_DIR, "face_utils", "face_dataset", "images")
 
-app = Flask(__name__)
-app.secret_key = CFG.SECRET_KEY
-app.permanent_session_lifetime = timedelta(hours=CFG.SESSION_HOURS)
-app.config.update(
-    SESSION_COOKIE_HTTPONLY = True,
-    SESSION_COOKIE_SAMESITE = "Lax",
-    SESSION_COOKIE_SECURE   = os.environ.get("HTTPS", "false").lower() == "true",
-    WTF_CSRF_TIME_LIMIT     = 3600,   # CSRF token valid for 1 hour
-)
 
-# ── Initialise extensions ────────────────────────────────────────────
-csrf.init_app(app)
-limiter.init_app(app)
+def create_app(config_object=None):
+    """Application factory — required for pytest fixtures and clean imports."""
+    app = Flask(__name__)
 
+    # ── Core config ──────────────────────────────────────────────────
+    app.secret_key = CFG.SECRET_KEY
+    app.permanent_session_lifetime = timedelta(hours=CFG.SESSION_HOURS)
+    app.config.update(
+        SESSION_COOKIE_HTTPONLY = True,
+        SESSION_COOKIE_SAMESITE = "Lax",
+        SESSION_COOKIE_SECURE   = os.environ.get("HTTPS", "false").lower() == "true",
+        WTF_CSRF_TIME_LIMIT     = 3600,   # CSRF token valid for 1 hour
+    )
 
-# ── Security headers ─────────────────────────────────────────────────
-@app.after_request
-def set_security_headers(response):
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"]         = "SAMEORIGIN"
-    response.headers["Referrer-Policy"]          = "strict-origin-when-cross-origin"
-    return response
+    # Allow test overrides (e.g. create_app("testing"))
+    if config_object == "testing":
+        app.config["TESTING"] = True
+        app.config["WTF_CSRF_ENABLED"] = False
 
+    # ── Initialise extensions ────────────────────────────────────────
+    csrf.init_app(app)
+    limiter.init_app(app)
 
-# ── Error handlers ───────────────────────────────────────────────────
-@app.errorhandler(404)
-def not_found(e):
-    return jsonify({"ok": False, "message": "Not found"}), 404
+    # ── Security headers ─────────────────────────────────────────────
+    @app.after_request
+    def set_security_headers(response):
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"]         = "SAMEORIGIN"
+        response.headers["Referrer-Policy"]          = "strict-origin-when-cross-origin"
+        return response
 
-@app.errorhandler(500)
-def server_error(e):
-    return jsonify({"ok": False, "message": "Server error"}), 500
+    # ── Error handlers ───────────────────────────────────────────────
+    @app.errorhandler(404)
+    def not_found(e):
+        return jsonify({"ok": False, "message": "Not found"}), 404
 
-@app.errorhandler(429)
-def too_many_requests(e):
-    return jsonify({"ok": False, "message": "Too many requests — please wait and try again."}), 429
+    @app.errorhandler(500)
+    def server_error(e):
+        return jsonify({"ok": False, "message": "Server error"}), 500
 
-@app.errorhandler(CSRFError)
-def handle_csrf_error(e):
-    flash("Session expired. Please log in again.", "warning")
-    return redirect(url_for("auth.login")), 400
+    @app.errorhandler(429)
+    def too_many_requests(e):
+        return jsonify({"ok": False, "message": "Too many requests — please wait and try again."}), 429
 
+    @app.errorhandler(CSRFError)
+    def handle_csrf_error(e):
+        flash("Session expired. Please log in again.", "warning")
+        return redirect(url_for("auth.login")), 400
 
-# ── Register all blueprints ──────────────────────────────────────────
-register_blueprints(app)
+    # ── Register all blueprints ──────────────────────────────────────
+    register_blueprints(app)
+
+    return app
 
 
 # ── Startup & scheduler ──────────────────────────────────────────────
 if __name__ == "__main__":
+    app = create_app()
 
     run_migrations()
     logger.info("Database migrations complete.")
@@ -103,6 +112,14 @@ if __name__ == "__main__":
     fill_missing_records_for_all_users()
     logger.info("Initial fill completed for all employees.")
 
+    # Check face dataset directory at startup
+    if not os.path.isdir(FACE_DATASET_DIR):
+        logger.warning(
+            "Face dataset directory not found at %s. "
+            "Face recognition will not work until images are enrolled.",
+            FACE_DATASET_DIR,
+        )
+
     scheduler = BackgroundScheduler(daemon=True, timezone=str(CFG.TIMEZONE))
     scheduler.add_job(
         mark_absent_and_holidays_for_all_users,
@@ -112,6 +129,7 @@ if __name__ == "__main__":
     scheduler.add_job(
         auto_close_pending_checkouts_for_all_users,
         "cron",
+        # Task 2.7: fix minute-wrap bug — decrement hour when minute wraps below 0
         hour=CFG.ABSENT_CUTOFF_HOUR if (CFG.ABSENT_CUTOFF_MINUTE - 1) >= 0 else (CFG.ABSENT_CUTOFF_HOUR - 1) % 24,
         minute=(CFG.ABSENT_CUTOFF_MINUTE - 1) % 60,
         id="nightly_autoclose", replace_existing=True,
