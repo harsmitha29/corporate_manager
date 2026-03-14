@@ -1,0 +1,160 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+
+/* =========================
+   GLOBAL STYLING
+========================= */
+* {
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    margin: 0;
+}
+
+/* =========================
+   PAGE BACKGROUND
+========================= */
+.page-wrapper {
+    min-height: 100vh;
+    background: url("../images/Registerhome.jpeg") no-repeat center center/cover;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 15px; /* for small screens */
+}
+
+/* =========================
+   GLASSMORPHISM CARD
+========================= */
+.card {
+    width: 350px;                /* compact width */
+    padding: 20px 20px;          /* tighter padding */
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(6px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+    text-align: center;
+    transition: all 0.3s ease;   /* smooth hover/resize transitions */
+}
+
+/* =========================
+   SIGNUP HEADING
+========================= */
+.card h2 {
+    margin-top: -5px;
+    margin-bottom: 12px;         /* reduced spacing */
+    font-weight: 600;
+    font-size: 22px;
+    color: #333;
+}
+
+/* =========================
+   INPUTS AND DROPDOWN
+========================= */
+.card input, 
+.card select {
+    width: 100%;
+    height: 36px;                /* smaller inputs */
+    padding: 8px 10px;
+    margin: 6px 0;               /* tight vertical spacing */
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+/* DROPDOWN SPECIFIC STYLING */
+.card select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-color: #fff;
+    background-image: url("data:image/svg+xml,%3Csvg fill='gray' height='16' viewBox='0 0 24 24' width='16' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 14px;
+    cursor: pointer;
+    margin-top: 4px;             /* small gap from password warning */
+    margin-bottom: 10px;         /* consistent spacing before button */
+}
+
+/* =========================
+   REGISTER BUTTON
+========================= */
+.card button {
+    width: 100%;
+    height: 40px;                /* smaller button */
+    margin-top: 10px;            /* tighter spacing */
+    background: #2c3e50;
+    color: #fff;
+    font-size: 15px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.card button:hover {
+    background: #1a252f;
+}
+
+/* =========================
+   TEXT BELOW FORM
+========================= */
+.card p {
+    margin-top: 12px;
+    font-size: 14px;
+}
+
+.card a {
+    color: #2c3e50;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.card a:hover {
+    text-decoration: underline;
+}
+
+/* LOGIN LINK TEXT */
+.signup-text {
+    margin-top: 12px;
+    text-align: center;
+    font-size: 13px;
+    color: #555;
+}
+
+.signup-text a {
+    color: #1a73e8;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.signup-text a:hover {
+    text-decoration: underline;
+}
+
+/* =========================
+   RESPONSIVE ADJUSTMENTS
+========================= */
+@media (max-width: 400px) {
+    .card {
+        width: 100%;
+        padding: 18px 15px;
+    }
+
+    .card input,
+    .card select,
+    .card button {
+        height: 34px;
+        font-size: 13px;
+    }
+
+    .card h2 {
+        font-size: 20px;
+    }
+}
+

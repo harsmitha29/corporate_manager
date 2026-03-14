@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Updates</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    body { background: #f5f7fb; font-family: 'Segoe UI', sans-serif; }
+    .sidebar { width:220px; min-height:100vh; background:#1e2a3a; position:fixed; top:0; left:0; z-index:100; padding:1.5rem 0; }
+    .sidebar .brand { color:#fff; font-weight:700; font-size:1.1rem; padding:0 1.25rem 1.5rem; border-bottom:1px solid #2d3f54; margin-bottom:1rem; display:flex; align-items:center; gap:.5rem; }
+    .sidebar a { display:flex; align-items:center; gap:.6rem; color:#a0b0c0; text-decoration:none; padding:.55rem 1.25rem; font-size:.9rem; transition:background .15s,color .15s; }
+    .sidebar a:hover,.sidebar a.active { background:#2d3f54; color:#fff; }
+    .sidebar a i { font-size:1rem; }
+    .main { margin-left:220px; min-height:100vh; }
+    .topbar { background:#fff; border-bottom:1px solid #e9ecef; padding:.75rem 1.75rem; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:90; }
+    .topbar .page-title { font-weight:600; font-size:1.05rem; color:#1e2a3a; }
+    .content { padding:1.75rem; }
+    .card { border:none; border-radius:.75rem; box-shadow:0 2px 12px rgba(0,0,0,.06); }
+    .table th { font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; color:#6c757d; }
+  </style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="brand"><i class="bi bi-building"></i>Corp Manager</div>
+  <a href="{{ url_for('attendance.user_dashboard') }}"><i class="bi bi-house"></i>Dashboard</a>
+  <a href="{{ url_for('leaves.leaves') }}"><i class="bi bi-calendar2-minus"></i>Leaves</a>
+  <a href="{{ url_for('regularization.regularization') }}"><i class="bi bi-pencil-square"></i>Regularization</a>
+  <a href="{{ url_for('daily_updates.all_daily_updates') }}" class="active"><i class="bi bi-journal-text"></i>Daily Updates</a>
+  <a href="{{ url_for('profile.profile') }}"><i class="bi bi-person"></i>Profile</a>
+  <a href="{{ url_for('auth.logout') }}" style="margin-top:1rem;"><i class="bi bi-box-arrow-left"></i>Logout</a>
+</nav>
+
+<div class="main">
+  <div class="topbar">
+    <span class="page-title"><i class="bi bi-journal-text me-2 text-primary"></i>Daily Updates</span>
+    <small class="text-muted">Logged in as {{ session.get('first_name','User') }}</small>
+  </div>
+  <div class="content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ 'danger' if category=='danger' else ('success' if category=='success' else 'warning') }} alert-dismissible fade show" role="alert">
+          {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endwith %}
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <small class="text-muted">{{ total_records }} record{{ 's' if total_records != 1 else '' }}</small>
+      <a href="{{ url_for('daily_updates.daily_update') }}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg"></i> New Update
+      </a>
+    </div>
+
+    <div class="card">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0" style="table-layout:fixed;min-width:700px;">
+            <thead class="table-light">
+              <tr>
+                <th class="ps-3" style="width:46px">#</th>
+                <th style="width:105px">Date</th>
+                <th style="width:180px">Project / Task</th>
+                <th>Work Summary</th>
+                <th style="width:160px">Remarks</th>
+                <th style="width:120px">Last Updated</th>
+                <th class="text-center" style="width:95px">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+            {% if updates %}
+              {% for u in updates %}
+              <tr>
+                <td class="ps-3 text-muted">{{ (page-1)*10 + loop.index }}</td>
+                <td><small class="fw-semibold">{{ u.update_date.strftime('%d %b %Y') if u.update_date else '—' }}</small></td>
+                <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ u.project_title or '' }}">
+                  <small>{{ u.project_title or '—' }}</small>
+                </td>
+                <td style="max-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="{{ u.work_summary or '' }}">
+                  <small class="text-muted">{{ u.work_summary or '—' }}</small>
+                </td>
+                <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ u.remarks or '' }}">
+                  <small class="text-muted">{{ u.remarks or '—' }}</small>
+                </td>
+                <td>
+                  <small class="text-muted" style="font-size:.75rem;">
+                    {{ u.updated_at.strftime('%d %b, %H:%M') if u.updated_at else '—' }}
+                  </small>
+                </td>
+                <td class="text-center">
+                  <div class="d-flex gap-1 justify-content-center">
+                    <a href="{{ url_for('daily_updates.edit_daily_update', update_id=u.update_id) }}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+                    <form method="POST" action="{{ url_for('daily_updates.delete_daily_update', update_id=u.update_id) }}"
+                          onsubmit="return confirm('Delete this update?');" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr><td colspan="7" class="text-center py-5 text-muted">
+                <i class="bi bi-journal fs-1 d-block mb-2"></i>No daily updates yet.
+                <div class="mt-2"><a href="{{ url_for('daily_updates.daily_update') }}" class="btn btn-primary btn-sm">Add First Update</a></div>
+              </td></tr>
+            {% endif %}
+            </tbody>
+          </table>
+        </div>
+        {% if total_pages > 1 %}
+        <div class="d-flex justify-content-center gap-2 py-3 border-top">
+          <a class="btn btn-sm btn-outline-secondary {% if page==1 %}disabled{% endif %}" href="{{ url_for('daily_updates.all_daily_updates', page=1) }}">&laquo;</a>
+          <a class="btn btn-sm btn-outline-secondary {% if page==1 %}disabled{% endif %}" href="{{ url_for('daily_updates.all_daily_updates', page=page-1) }}">&lsaquo;</a>
+          <span class="btn btn-sm btn-primary disabled">{{ page }} / {{ total_pages }}</span>
+          <a class="btn btn-sm btn-outline-secondary {% if page==total_pages %}disabled{% endif %}" href="{{ url_for('daily_updates.all_daily_updates', page=page+1) }}">&rsaquo;</a>
+          <a class="btn btn-sm btn-outline-secondary {% if page==total_pages %}disabled{% endif %}" href="{{ url_for('daily_updates.all_daily_updates', page=total_pages) }}">&raquo;</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

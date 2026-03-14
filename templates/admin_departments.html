@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Department Management</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    body { background: #f5f7fb; font-family: 'Segoe UI', sans-serif; margin: 0; }
+    .sidebar { width:220px; min-height:100vh; background:#1e2a3a; position:fixed; top:0; left:0; z-index:100; padding:1.5rem 0; }
+    .sidebar .brand { color:#fff; font-weight:700; font-size:1.1rem; padding:0 1.25rem 1.5rem; border-bottom:1px solid #2d3f54; margin-bottom:1rem; display:flex; align-items:center; gap:.5rem; }
+    .sidebar a { display:flex; align-items:center; gap:.6rem; color:#a0b0c0; text-decoration:none; padding:.55rem 1.25rem; font-size:.9rem; transition:background .15s,color .15s; }
+    .sidebar a:hover,.sidebar a.active { background:#2d3f54; color:#fff; }
+    .sidebar a i { font-size:1rem; }
+    .main { margin-left:220px; min-height:100vh; display:flex; flex-direction:column; }
+    .topbar { background:#fff; border-bottom:1px solid #e9ecef; padding:.75rem 1.75rem; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:90; }
+    .topbar .page-title { font-weight:600; font-size:1.05rem; color:#1e2a3a; }
+    .content { padding:1.25rem 1.5rem; flex:1; display:flex; flex-direction:column; gap:.75rem; }
+    .layout { display:grid; grid-template-columns:280px 1fr; gap:1rem; flex:1; min-height:500px; }
+    .left-panel,.right-panel { background:#fff; border-radius:.75rem; box-shadow:0 2px 12px rgba(0,0,0,.06); display:flex; flex-direction:column; overflow:hidden; }
+    .panel-header,.right-header { padding:.7rem 1rem; border-bottom:1px solid #e9ecef; font-size:.88rem; font-weight:700; color:#1e2a3a; display:flex; align-items:center; justify-content:space-between; gap:.5rem; flex-shrink:0; }
+    .panel-body { padding:1rem; overflow-y:auto; flex:1; }
+    .panel-body::-webkit-scrollbar { width:4px; }
+    .panel-body::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:4px; }
+    .form-group { margin-bottom:.7rem; }
+    .form-lbl { display:block; font-size:.7rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.06em; margin-bottom:.2rem; }
+    .req { color:#ef4444; }
+    .fc { width:100%; padding:.42rem .6rem; border:1.5px solid #e2e8f0; border-radius:6px; background:#f8faff; color:#1e293b; font-size:.83rem; outline:none; transition:border-color .2s; box-sizing:border-box; }
+    .fc:focus { border-color:#2563eb; background:#fff; }
+    textarea.fc { resize:vertical; min-height:52px; }
+    .submit-btn { width:100%; padding:.48rem; background:#2563eb; color:#fff; border:none; border-radius:7px; font-size:.85rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:.4rem; transition:background .2s; margin-top:.2rem; }
+    .submit-btn:hover { background:#1d4ed8; }
+    .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:.5rem; margin-top:.85rem; }
+    .stat-card { background:#f8faff; border:1px solid #e2e8f0; border-radius:8px; padding:.55rem .7rem; }
+    .stat-val { font-size:1.5rem; font-weight:700; color:#2563eb; line-height:1; }
+    .stat-lbl { font-size:.67rem; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:.05em; margin-top:2px; }
+    .right-title { font-size:.9rem; font-weight:700; color:#1e293b; }
+    .search-wrap { position:relative; }
+    .search-icon { position:absolute; left:8px; top:50%; transform:translateY(-50%); color:#94a3b8; pointer-events:none; font-size:.78rem; }
+    .search-box { padding:.38rem .6rem .38rem 1.75rem; border:1.5px solid #e2e8f0; border-radius:6px; background:#f8faff; color:#334155; font-size:.8rem; outline:none; width:180px; transition:border-color .2s; }
+    .search-box:focus { border-color:#2563eb; }
+    .table-container { flex:1; overflow-y:auto; min-height:0; }
+    .table-container::-webkit-scrollbar { width:5px; }
+    .table-container::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:4px; }
+    table { width:100%; border-collapse:collapse; font-size:.84rem; }
+    thead th { position:sticky; top:0; z-index:2; background:#f4f6fb; color:#64748b; font-weight:700; font-size:.7rem; text-transform:uppercase; letter-spacing:.07em; padding:.65rem 1rem; border-bottom:2px solid #e2e8f0; text-align:left; white-space:nowrap; }
+    thead th.c { text-align:center; }
+    tbody td { padding:.72rem 1rem; border-bottom:1px solid #f1f5f9; color:#334155; vertical-align:middle; }
+    tbody td.c { text-align:center; }
+    tbody tr:last-child td { border-bottom:none; }
+    tbody tr:hover td { background:#f8faff; }
+    .empty-row td { text-align:center; padding:2.5rem; color:#94a3b8; font-size:.85rem; }
+    .slno-cell { color:#94a3b8; font-weight:600; font-size:.78rem; }
+    .code-badge { display:inline-block; padding:2px 8px; border-radius:5px; background:#eff6ff; color:#2563eb; font-size:.72rem; font-weight:700; letter-spacing:.04em; }
+    .dept-name { font-weight:600; font-size:.86rem; color:#1e293b; }
+    .dept-desc { font-size:.74rem; color:#94a3b8; margin-top:1px; }
+    .emp-count { display:inline-flex; align-items:center; justify-content:center; min-width:24px; height:20px; padding:0 6px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:999px; font-size:.74rem; font-weight:700; color:#0369a1; }
+    .status-pill { display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:999px; font-size:.72rem; font-weight:700; }
+    .status-pill.active { background:#f0fdf4; color:#15803d; }
+    .status-pill.inactive { background:#fef2f2; color:#dc2626; }
+    .status-dot { width:5px; height:5px; border-radius:50%; background:currentColor; }
+    .action-btn { width:27px; height:27px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-size:.8rem; border:none; cursor:pointer; transition:all .15s; }
+    .btn-edit { background:#eff6ff; color:#2563eb; }
+    .btn-edit:hover { background:#dbeafe; }
+    .btn-toggle { background:#fff7ed; color:#d97706; }
+    .btn-toggle:hover { background:#fde68a; }
+    .btn-toggle.is-active { background:#fef2f2; color:#dc2626; }
+    .btn-toggle.is-active:hover { background:#fecaca; }
+    .btn-delete { background:#fff1f2; color:#e11d48; }
+    .btn-delete:hover { background:#ffe4e6; }
+    .actions-cell { display:flex; align-items:center; gap:4px; justify-content:center; }
+    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(15,23,42,.45); z-index:200; align-items:center; justify-content:center; }
+    .modal-overlay.open { display:flex; }
+    .modal-box { background:#fff; border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,.18); width:100%; max-width:420px; overflow:hidden; animation:popIn .16s ease; }
+    @keyframes popIn { from{opacity:0;transform:scale(.94) translateY(8px)} to{opacity:1;transform:scale(1) translateY(0)} }
+    .modal-hd { padding:.85rem 1rem; border-bottom:1px solid #e2e8f0; display:flex; align-items:center; justify-content:space-between; }
+    .modal-title { font-size:.93rem; font-weight:700; color:#1e293b; }
+    .modal-close { width:26px; height:26px; border-radius:6px; background:#f1f5f9; border:none; cursor:pointer; font-size:.95rem; display:flex; align-items:center; justify-content:center; color:#64748b; }
+    .modal-close:hover { background:#e2e8f0; }
+    .modal-bd { padding:1rem; }
+    .modal-ft { padding:.7rem 1rem; border-top:1px solid #e2e8f0; display:flex; gap:.5rem; justify-content:flex-end; }
+    .btn-cancel { padding:.4rem 1rem; border:1.5px solid #e2e8f0; border-radius:7px; background:#fff; color:#64748b; font-size:.83rem; font-weight:600; cursor:pointer; }
+    .btn-cancel:hover { background:#f8faff; }
+    .btn-save { padding:.4rem 1.1rem; background:#2563eb; color:#fff; border:none; border-radius:7px; font-size:.83rem; font-weight:700; cursor:pointer; transition:background .2s; }
+    .btn-save:hover { background:#1d4ed8; }
+    .confirm-overlay { display:none; position:fixed; inset:0; background:rgba(15,23,42,.45); z-index:210; align-items:center; justify-content:center; }
+    .confirm-overlay.open { display:flex; }
+    .confirm-box { background:#fff; border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,.18); width:100%; max-width:360px; padding:1.5rem; text-align:center; animation:popIn .16s ease; }
+    .confirm-icon { width:44px; height:44px; background:#fff1f2; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto .6rem; font-size:1.2rem; }
+    .confirm-title { font-size:.96rem; font-weight:700; color:#1e293b; margin-bottom:.3rem; }
+    .confirm-msg { font-size:.82rem; color:#64748b; margin-bottom:1.1rem; line-height:1.5; }
+    .confirm-btns { display:flex; gap:.5rem; justify-content:center; }
+    .btn-confirm-cancel { padding:.42rem 1.1rem; border:1.5px solid #e2e8f0; border-radius:7px; background:#fff; color:#64748b; font-size:.82rem; font-weight:600; cursor:pointer; }
+    .btn-confirm-delete { padding:.42rem 1.1rem; background:#e11d48; color:#fff; border:none; border-radius:7px; font-size:.82rem; font-weight:700; cursor:pointer; }
+    .btn-confirm-delete:hover { background:#be123c; }
+  </style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="brand"><i class="bi bi-building"></i>Corp Manager</div>
+  <a href="{{ url_for('admin.admin_panel') }}"><i class="bi bi-grid"></i>Dashboard</a>
+  <a href="{{ url_for('attendance.admin_attendance_overview') }}"><i class="bi bi-calendar-check"></i>Attendance</a>
+  <a href="{{ url_for('leaves.admin_leaves') }}"><i class="bi bi-calendar2-minus"></i>Leaves</a>
+  <a href="{{ url_for('regularization.admin_regularizations') }}"><i class="bi bi-pencil-square"></i>Regularizations</a>
+  <a href="{{ url_for('departments.admin_departments') }}" class="active"><i class="bi bi-diagram-3"></i>Departments</a>
+  <a href="{{ url_for('holidays.admin_holidays') }}"><i class="bi bi-sun"></i>Holidays</a>
+  <a href="{{ url_for('attendance.admin_team_summary') }}"><i class="bi bi-bar-chart"></i>Team Summary</a>
+  <a href="{{ url_for('auth.logout') }}" style="margin-top:1rem;"><i class="bi bi-box-arrow-left"></i>Logout</a>
+</nav>
+
+<div class="main">
+  <div class="topbar">
+    <span class="page-title"><i class="bi bi-diagram-3 me-2 text-primary"></i>Department Management</span>
+    <small class="text-muted">Logged in as Admin</small>
+  </div>
+  <div class="content">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ 'danger' if category=='danger' else ('success' if category=='success' else 'warning') }} alert-dismissible fade show mb-0" role="alert">
+          {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endwith %}
+
+    <div class="layout">
+
+      <!-- LEFT: Add Form -->
+      <div class="left-panel">
+        <div class="panel-header">
+          <span><i class="bi bi-plus-circle text-primary me-1"></i>Add Department</span>
+        </div>
+        <div class="panel-body">
+          <form method="POST" action="{{ url_for('departments.admin_department_add') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-group">
+              <label class="form-lbl">Department Name <span class="req">*</span></label>
+              <input type="text" name="dept_name" class="fc" placeholder="e.g. Engineering" required maxlength="100">
+            </div>
+            <div class="form-group">
+              <label class="form-lbl">Dept Code <span class="req">*</span></label>
+              <input type="text" name="dept_code" class="fc" placeholder="e.g. ENG" required maxlength="20"
+                     style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+            </div>
+            <div class="form-group">
+              <label class="form-lbl">Description</label>
+              <textarea name="description" class="fc" placeholder="Brief description (optional)" maxlength="300"></textarea>
+            </div>
+            <button type="submit" class="submit-btn">
+              <i class="bi bi-plus-lg"></i> Add Department
+            </button>
+          </form>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-val">{{ departments|length }}</div>
+              <div class="stat-lbl">Total</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-val" style="color:#15803d;">{{ departments|selectattr('is_active')|list|length }}</div>
+              <div class="stat-lbl">Active</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-val" style="color:#0369a1;">{{ departments|sum(attribute='emp_count') }}</div>
+              <div class="stat-lbl">Employees</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-val" style="color:#9333ea;">{{ departments|rejectattr('is_active')|list|length }}</div>
+              <div class="stat-lbl">Inactive</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Table -->
+      <div class="right-panel">
+        <div class="right-header">
+          <span class="right-title"><i class="bi bi-list-ul me-1 text-primary"></i>All Departments</span>
+          <div class="search-wrap">
+            <i class="bi bi-search search-icon"></i>
+            <input type="text" class="search-box" id="searchBox" placeholder="Search…" oninput="filterTable()">
+          </div>
+        </div>
+        <div class="table-container">
+          <table id="deptTable">
+            <thead>
+              <tr>
+                <th style="width:36px">#</th>
+                <th style="width:70px">Code</th>
+                <th>Department</th>
+                <th class="c" style="width:70px">Emp.</th>
+                <th class="c" style="width:80px">Status</th>
+                <th class="c" style="width:90px">Created</th>
+                <th class="c" style="width:90px">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if departments %}
+                {% for d in departments %}
+                <tr data-search="{{ d.dept_name|lower }} {{ d.dept_code|lower }} {{ (d.description or '')|lower }}">
+                  <td><span class="slno-cell">{{ loop.index }}</span></td>
+                  <td><span class="code-badge">{{ d.dept_code }}</span></td>
+                  <td>
+                    <div class="dept-name">{{ d.dept_name }}</div>
+                    {% if d.description %}<div class="dept-desc">{{ d.description }}</div>{% endif %}
+                  </td>
+                  <td class="c"><span class="emp-count">{{ d.emp_count }}</span></td>
+                  <td class="c">
+                    {% if d.is_active %}
+                      <span class="status-pill active"><span class="status-dot"></span>Active</span>
+                    {% else %}
+                      <span class="status-pill inactive"><span class="status-dot"></span>Inactive</span>
+                    {% endif %}
+                  </td>
+                  <td class="c" style="color:#94a3b8;font-size:.75rem;white-space:nowrap;">
+                    {{ d.created_at.strftime('%d %b %Y') if d.created_at else '—' }}
+                  </td>
+                  <td class="c">
+                    <div class="actions-cell">
+                      <button class="action-btn btn-edit" title="Edit"
+                          data-id="{{ d.id }}" data-name="{{ d.dept_name }}"
+                          data-code="{{ d.dept_code }}" data-desc="{{ d.description or '' }}"
+                          onclick="openEdit(this)">
+                        <i class="bi bi-pencil"></i>
+                      </button>
+                      <form method="POST" action="{{ url_for('departments.admin_department_toggle', dept_id=d.id) }}" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" title="{{ 'Deactivate' if d.is_active else 'Activate' }}"
+                            class="action-btn btn-toggle {{ 'is-active' if d.is_active else '' }}">
+                          <i class="bi bi-toggle-{{ 'on' if d.is_active else 'off' }}"></i>
+                        </button>
+                      </form>
+                      <button class="action-btn btn-delete" title="Delete"
+                          data-id="{{ d.id }}" data-name="{{ d.dept_name }}" data-count="{{ d.emp_count }}"
+                          onclick="openDelete(this)">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              {% else %}
+                <tr class="empty-row">
+                  <td colspan="7"><i class="bi bi-building fs-1 d-block mb-2 text-muted"></i>No departments yet.</td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="editOverlay" onclick="closeEditIfOutside(event)">
+  <div class="modal-box">
+    <div class="modal-hd">
+      <span class="modal-title"><i class="bi bi-pencil me-1 text-primary"></i>Edit Department</span>
+      <button class="modal-close" onclick="closeEdit()">✕</button>
+    </div>
+    <form method="POST" id="editForm" action="">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="modal-bd">
+        <div class="form-group">
+          <label class="form-lbl">Department Name <span class="req">*</span></label>
+          <input type="text" name="dept_name" id="editName" class="fc" required maxlength="100">
+        </div>
+        <div class="form-group">
+          <label class="form-lbl">Dept Code <span class="req">*</span></label>
+          <input type="text" name="dept_code" id="editCode" class="fc" required maxlength="20"
+                 style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-lbl">Description</label>
+          <textarea name="description" id="editDesc" class="fc" maxlength="300"></textarea>
+        </div>
+      </div>
+      <div class="modal-ft">
+        <button type="button" class="btn-cancel" onclick="closeEdit()">Cancel</button>
+        <button type="submit" class="btn-save">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- DELETE CONFIRM -->
+<div class="confirm-overlay" id="deleteOverlay" onclick="closeDeleteIfOutside(event)">
+  <div class="confirm-box">
+    <div class="confirm-icon">🗑️</div>
+    <div class="confirm-title">Delete Department?</div>
+    <div class="confirm-msg" id="deleteMsg">Are you sure?</div>
+    <div class="confirm-btns">
+      <button class="btn-confirm-cancel" onclick="closeDelete()">Cancel</button>
+      <form method="POST" id="deleteForm" action="" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn-confirm-delete">Yes, Delete</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+<script>
+  function filterTable() {
+    const q = document.getElementById('searchBox').value.toLowerCase();
+    document.querySelectorAll('#deptTable tbody tr[data-search]').forEach(r => {
+      r.style.display = r.dataset.search.includes(q) ? '' : 'none';
+    });
+  }
+  function openEdit(btn) {
+    document.getElementById('editForm').action = `/admin/departments/${btn.dataset.id}/edit`;
+    document.getElementById('editName').value  = btn.dataset.name;
+    document.getElementById('editCode').value  = btn.dataset.code;
+    document.getElementById('editDesc').value  = btn.dataset.desc;
+    document.getElementById('editOverlay').classList.add('open');
+  }
+  function closeEdit() { document.getElementById('editOverlay').classList.remove('open'); }
+  function closeEditIfOutside(e) { if(e.target===document.getElementById('editOverlay')) closeEdit(); }
+  function openDelete(btn) {
+    if (parseInt(btn.dataset.count) > 0) {
+      alert(`Cannot delete "${btn.dataset.name}" — ${btn.dataset.count} employee(s) assigned. Reassign or deactivate instead.`);
+      return;
+    }
+    document.getElementById('deleteForm').action = `/admin/departments/${btn.dataset.id}/delete`;
+    document.getElementById('deleteMsg').textContent = `Permanently delete "${btn.dataset.name}"? This cannot be undone.`;
+    document.getElementById('deleteOverlay').classList.add('open');
+  }
+  function closeDelete() { document.getElementById('deleteOverlay').classList.remove('open'); }
+  function closeDeleteIfOutside(e) { if(e.target===document.getElementById('deleteOverlay')) closeDelete(); }
+  document.addEventListener('keydown', e => { if(e.key==='Escape'){closeEdit();closeDelete();} });
+</script>
+</body>
+</html>

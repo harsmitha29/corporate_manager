@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Dashboard</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    body { background: #f5f7fb; font-family: 'Segoe UI', sans-serif; }
+    .sidebar { width:220px; min-height:100vh; background:#1e2a3a; position:fixed; top:0; left:0; z-index:100; padding:1.5rem 0; }
+    .sidebar .brand { color:#fff; font-weight:700; font-size:1.1rem; padding:0 1.25rem 1.5rem; border-bottom:1px solid #2d3f54; margin-bottom:1rem; display:flex; align-items:center; gap:.5rem; }
+    .sidebar a { display:flex; align-items:center; gap:.6rem; color:#a0b0c0; text-decoration:none; padding:.55rem 1.25rem; font-size:.9rem; transition:background .15s,color .15s; }
+    .sidebar a:hover,.sidebar a.active { background:#2d3f54; color:#fff; }
+    .sidebar a i { font-size:1rem; }
+    .main { margin-left:220px; min-height:100vh; }
+    .topbar { background:#fff; border-bottom:1px solid #e9ecef; padding:.75rem 1.75rem; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:90; }
+    .topbar .page-title { font-weight:600; font-size:1.05rem; color:#1e2a3a; }
+    .content { padding:1.75rem; }
+    .card { border:none; border-radius:.75rem; box-shadow:0 2px 12px rgba(0,0,0,.06); }
+    /* Stat cards */
+    .stat-card { background:#fff; border-radius:.75rem; box-shadow:0 2px 12px rgba(0,0,0,.06); padding:1rem 1.25rem; display:flex; align-items:center; gap:1rem; }
+    .stat-icon { width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.2rem; flex-shrink:0; }
+    .stat-val { font-size:1.4rem; font-weight:700; line-height:1; color:#1e2a3a; }
+    .stat-lbl { font-size:.72rem; color:#94a3b8; text-transform:uppercase; letter-spacing:.05em; font-weight:600; margin-top:2px; }
+    /* Today banner */
+    .today-banner { background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 100%); border-radius:.75rem; padding:1rem 1.5rem; color:#fff; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.75rem; }
+    .today-banner .t-label { font-size:.75rem; opacity:.8; text-transform:uppercase; letter-spacing:.05em; }
+    .today-banner .t-value { font-size:1.05rem; font-weight:700; margin-top:3px; }
+    /* Attendance table */
+    .att-table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    .att-table { width:100%; table-layout:fixed; border-collapse:collapse; font-size:.84rem; min-width:640px; }
+    .att-table thead th { background:#f8faff; color:#64748b; font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; padding:.65rem 1rem; border-bottom:2px solid #e9ecef; white-space:nowrap; }
+    .att-table thead th.tc { text-align:center; }
+    .att-table tbody td { padding:.68rem 1rem; border-bottom:1px solid #f1f5f9; vertical-align:middle; color:#334155; overflow:hidden; }
+    .att-table tbody td.tc { text-align:center; }
+    .att-table tbody tr:last-child td { border-bottom:none; }
+    .att-table tbody tr:hover td { background:#f8faff; }
+    .col-date   { width:108px; }
+    .col-status { width:105px; }
+    .col-in     { width:85px; }
+    .col-out    { width:85px; }
+    .col-hours  { width:70px; }
+    .time-code { font-family:'Courier New',monospace; font-size:.79rem; color:#475569; background:#f1f5f9; padding:2px 6px; border-radius:4px; white-space:nowrap; display:inline-block; }
+    .summary-cell { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:0; font-size:.79rem; color:#64748b; }
+    .hours-pill { display:inline-block; font-size:.74rem; font-weight:600; color:#0369a1; background:#e0f2fe; padding:1px 7px; border-radius:999px; }
+    .empty-row td { text-align:center; padding:3rem; color:#94a3b8; }
+    /* Assessment mini-card */
+    .assess-card { background:linear-gradient(135deg,#f0fdf4,#dcfce7); border-radius:.75rem; border:1px solid #bbf7d0; padding:1rem 1.25rem; }
+  </style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="brand"><i class="bi bi-building"></i>Corp Manager</div>
+  <a href="{{ url_for('attendance.user_dashboard') }}" class="active"><i class="bi bi-house"></i>Dashboard</a>
+  <a href="{{ url_for('leaves.leaves') }}"><i class="bi bi-calendar2-minus"></i>Leaves</a>
+  <a href="{{ url_for('regularization.regularization') }}"><i class="bi bi-pencil-square"></i>Regularization</a>
+  <a href="{{ url_for('daily_updates.all_daily_updates') }}"><i class="bi bi-journal-text"></i>Daily Updates</a>
+  <a href="{{ url_for('self_assessment.self_assessment') }}"><i class="bi bi-star"></i>Self Assessment</a>
+  <a href="{{ url_for('profile.profile') }}"><i class="bi bi-person"></i>Profile</a>
+  <a href="{{ url_for('auth.logout') }}" style="margin-top:1rem;"><i class="bi bi-box-arrow-left"></i>Logout</a>
+</nav>
+
+<div class="main">
+  <div class="topbar">
+    <span class="page-title"><i class="bi bi-house me-2 text-primary"></i>My Attendance</span>
+    <small class="text-muted">
+      Logged in as {{ session.get('first_name','User') }}
+      {% if emp_info and emp_info.designation %} &middot; <em>{{ emp_info.designation }}</em>{% endif %}
+    </small>
+  </div>
+
+  <div class="content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ 'danger' if category=='danger' else ('success' if category=='success' else 'warning') }} alert-dismissible fade show" role="alert">
+          {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endwith %}
+
+    <!-- Today banner -->
+    <div class="today-banner mb-4">
+      <div>
+        <div class="t-label">Today — {{ today.strftime('%A, %d %b %Y') }}</div>
+        <div class="t-value mt-1">
+          {% if today_attendance %}
+            {% set s = today_attendance.status %}
+            {% if s in ('Present','Completed') %}✅ Present
+            {% elif s == 'Late' %}🕐 Checked in Late
+            {% elif s == 'On Leave' %}🏖️ On Leave
+            {% elif s == 'Absent' %}❌ Absent
+            {% elif s in ('Weekend','Holiday') %}🎉 {{ s }}
+            {% elif s == 'Half Day' %}⏱️ Half Day
+            {% else %}— Not yet recorded{% endif %}
+          {% else %}— Not yet recorded{% endif %}
+        </div>
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <a id="attendanceButton" href="{{ url_for('attendance.face_auth', action='checkin') }}" class="btn btn-light btn-sm fw-semibold">
+          <i class="bi bi-check-circle"></i> Check In
+        </a>
+        <a href="{{ url_for('daily_updates.daily_update') }}" class="btn btn-outline-light btn-sm">
+          <i class="bi bi-journal-plus"></i> Daily Update
+        </a>
+      </div>
+    </div>
+
+    <!-- Monthly summary cards -->
+    {% if monthly %}
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-md-3">
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#dcfce7;color:#16a34a;"><i class="bi bi-check-circle-fill"></i></div>
+          <div><div class="stat-val">{{ monthly.present }}</div><div class="stat-lbl">Present</div></div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#fee2e2;color:#dc2626;"><i class="bi bi-x-circle-fill"></i></div>
+          <div><div class="stat-val">{{ monthly.absent }}</div><div class="stat-lbl">Absent</div></div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#dbeafe;color:#2563eb;"><i class="bi bi-calendar2-minus-fill"></i></div>
+          <div><div class="stat-val">{{ monthly.on_leave }}</div><div class="stat-lbl">On Leave</div></div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#fef9c3;color:#ca8a04;"><i class="bi bi-clock-history"></i></div>
+          <div><div class="stat-val">{{ monthly.total_hours }}</div><div class="stat-lbl">Hours / Month</div></div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Self-assessment mini widget -->
+    {% if latest_assessment %}
+    <div class="assess-card mb-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
+      <div>
+        <div class="fw-semibold text-success mb-1"><i class="bi bi-star-fill me-1"></i>Latest Appraisal — Cycle {{ latest_assessment.cycle_number }}</div>
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+          <span class="text-muted" style="font-size:.85rem;">
+            Your rating: <strong class="text-warning">{{ latest_assessment.employee_rating }}/5</strong>
+          </span>
+          {% if latest_assessment.admin_rating is not none %}
+          <span class="text-muted" style="font-size:.85rem;">
+            Admin rating: <strong class="text-primary">{{ latest_assessment.admin_rating }}/5</strong>
+          </span>
+          {% endif %}
+          {% if latest_assessment.appraisal_points is not none %}
+          <span class="badge bg-success" style="font-size:.8rem;">
+            Final score: {{ latest_assessment.appraisal_points|round(2) }}/5
+          </span>
+          {% endif %}
+          <span class="badge {{ 'bg-success' if latest_assessment.status == 'Approved' else 'bg-warning text-dark' }}">
+            {{ latest_assessment.status }}
+          </span>
+        </div>
+      </div>
+      <a href="{{ url_for('self_assessment.self_assessment') }}" class="btn btn-sm btn-success">
+        <i class="bi bi-star"></i> View / Update
+      </a>
+    </div>
+    {% else %}
+    <div class="assess-card mb-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
+      <div class="text-muted" style="font-size:.88rem;">
+        <i class="bi bi-star me-1"></i>No self-assessment submitted yet for the current cycle.
+      </div>
+      <a href="{{ url_for('self_assessment.self_assessment') }}" class="btn btn-sm btn-outline-success">
+        <i class="bi bi-star"></i> Self Assessment
+      </a>
+    </div>
+    {% endif %}
+
+    <!-- Attendance history table -->
+    <div class="card">
+      <div class="card-header bg-white fw-semibold border-bottom py-3 d-flex align-items-center justify-content-between">
+        <span><i class="bi bi-calendar-check me-2 text-primary"></i>Attendance History</span>
+        <small class="text-muted fw-normal">Page {{ page }} / {{ total_pages }}</small>
+      </div>
+      <div class="card-body p-0">
+        <div class="att-table-wrap">
+          <table class="att-table">
+            <colgroup>
+              <col class="col-date">
+              <col class="col-status">
+              <col class="col-in">
+              <col class="col-out">
+              <col class="col-hours">
+              <col>
+            </colgroup>
+            <thead>
+              <tr>
+                <th class="ps-3">Date</th>
+                <th>Status</th>
+                <th>Check‑In</th>
+                <th>Check‑Out</th>
+                <th class="tc">Hours</th>
+                <th>Work Summary</th>
+              </tr>
+            </thead>
+            <tbody>
+            {% if attendance %}
+              {% for record in attendance %}
+              <tr>
+                <td class="ps-3">
+                  <span style="font-size:.83rem;font-weight:600;">{{ record.attendance_date.strftime('%d %b %Y') if record.attendance_date else '—' }}</span>
+                  <br><small class="text-muted" style="font-size:.7rem;">{{ record.attendance_date.strftime('%a') if record.attendance_date else '' }}</small>
+                </td>
+                <td>
+                  {% set s = record.status %}
+                  {% if s == 'Completed' %}<span class="badge bg-success">Completed</span>
+                  {% elif s == 'Present' %}<span class="badge bg-info text-dark">Present</span>
+                  {% elif s == 'Late' %}<span class="badge bg-warning text-dark">Late</span>
+                  {% elif s == 'On Leave' %}<span class="badge bg-primary">On Leave</span>
+                  {% elif s == 'Half Day' %}<span class="badge text-white" style="background:#f97316;">Half Day</span>
+                  {% elif s == 'Weekend' %}<span class="badge bg-secondary">Weekend</span>
+                  {% elif s == 'Holiday' %}<span class="badge text-white" style="background:#7c3aed;">Holiday</span>
+                  {% elif s == 'Absent' %}<span class="badge bg-danger">Absent</span>
+                  {% else %}<span class="badge bg-light text-muted border">—</span>{% endif %}
+                </td>
+                <td>
+                  {% if record.check_in %}
+                    {% if record.check_in.__class__.__name__ == 'timedelta' %}
+                      {% set ts = record.check_in.seconds %}
+                      <span class="time-code">{{ '%02d:%02d'|format(ts//3600, (ts%3600)//60) }}</span>
+                    {% else %}
+                      <span class="time-code">{{ record.check_in|string|truncate(5,True,'') }}</span>
+                    {% endif %}
+                  {% else %}<span class="text-muted">—</span>{% endif %}
+                </td>
+                <td>
+                  {% if record.check_out %}
+                    {% if record.check_out.__class__.__name__ == 'timedelta' %}
+                      {% set ts = record.check_out.seconds %}
+                      <span class="time-code">{{ '%02d:%02d'|format(ts//3600, (ts%3600)//60) }}</span>
+                    {% else %}
+                      <span class="time-code">{{ record.check_out|string|truncate(5,True,'') }}</span>
+                    {% endif %}
+                  {% else %}<span class="text-muted">—</span>{% endif %}
+                </td>
+                <td class="tc">
+                  {% if record.hours_worked %}
+                    <span class="hours-pill">{{ record.hours_worked }}h</span>
+                  {% else %}<span class="text-muted">—</span>{% endif %}
+                </td>
+                <td class="summary-cell" title="{{ record.work_summary or '' }}">
+                  {{ record.work_summary or '—' }}
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr class="empty-row">
+                <td colspan="6"><i class="bi bi-calendar-x fs-1 d-block mb-2"></i>No attendance records found.</td>
+              </tr>
+            {% endif %}
+            </tbody>
+          </table>
+        </div>
+
+        {% if total_pages > 1 %}
+        <div class="d-flex justify-content-center align-items-center gap-2 py-3 border-top">
+          <a class="btn btn-sm btn-outline-secondary {% if page==1 %}disabled{% endif %}" href="{{ url_for('attendance.user_dashboard', page=1) }}">&laquo;</a>
+          <a class="btn btn-sm btn-outline-secondary {% if page==1 %}disabled{% endif %}" href="{{ url_for('attendance.user_dashboard', page=page-1) }}">&lsaquo;</a>
+          <span class="btn btn-sm btn-primary disabled">{{ page }} / {{ total_pages }}</span>
+          <a class="btn btn-sm btn-outline-secondary {% if page==total_pages %}disabled{% endif %}" href="{{ url_for('attendance.user_dashboard', page=page+1) }}">&rsaquo;</a>
+          <a class="btn btn-sm btn-outline-secondary {% if page==total_pages %}disabled{% endif %}" href="{{ url_for('attendance.user_dashboard', page=total_pages) }}">&raquo;</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const btn = document.getElementById("attendanceButton");
+  if (!btn) return;
+  async function updateButton() {
+    try {
+      const res = await fetch("/get-attendance-status");
+      if (!res.ok) return;
+      const d = await res.json();
+      if (d.status === "checked_in") {
+        btn.innerHTML = '<i class="bi bi-box-arrow-right"></i> Check Out';
+        btn.className = 'btn btn-warning btn-sm fw-semibold';
+        btn.href = "{{ url_for('attendance.face_auth', action='checkout') }}";
+      } else if (d.status === "completed") {
+        btn.innerHTML = '<i class="bi bi-check2-all"></i> Done Today';
+        btn.className = 'btn btn-secondary btn-sm fw-semibold disabled';
+      } else if (d.status === "holiday") {
+        btn.innerHTML = '<i class="bi bi-sun"></i> Holiday';
+        btn.className = 'btn btn-light btn-sm fw-semibold disabled';
+      } else {
+        btn.innerHTML = '<i class="bi bi-check-circle"></i> Check In';
+        btn.className = 'btn btn-light btn-sm fw-semibold';
+        btn.href = "{{ url_for('attendance.face_auth', action='checkin') }}";
+      }
+    } catch(e) {}
+  }
+  updateButton();
+  setInterval(updateButton, 10000);
+});
+</script>
+</body>
+</html>

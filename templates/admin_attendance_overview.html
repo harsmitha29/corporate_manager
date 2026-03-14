@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Attendance Overview</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    body { background: #f5f7fb; font-family: 'Segoe UI', sans-serif; }
+    .sidebar {
+      width: 220px; min-height: 100vh; background: #1e2a3a;
+      position: fixed; top: 0; left: 0; z-index: 100;
+      padding: 1.5rem 0;
+    }
+    .sidebar .brand {
+      color: #fff; font-weight: 700; font-size: 1.1rem;
+      padding: 0 1.25rem 1.5rem; border-bottom: 1px solid #2d3f54;
+      margin-bottom: 1rem; display: flex; align-items: center; gap: .5rem;
+    }
+    .sidebar a {
+      display: flex; align-items: center; gap: .6rem;
+      color: #a0b0c0; text-decoration: none; padding: .55rem 1.25rem;
+      font-size: .9rem; transition: background .15s, color .15s;
+    }
+    .sidebar a:hover, .sidebar a.active { background: #2d3f54; color: #fff; }
+    .sidebar a i { font-size: 1rem; }
+    .main { margin-left: 220px; min-height: 100vh; }
+    .topbar {
+      background: #fff; border-bottom: 1px solid #e9ecef;
+      padding: .75rem 1.75rem; display: flex;
+      align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 90;
+    }
+    .topbar .page-title { font-weight: 600; font-size: 1.05rem; color: #1e2a3a; }
+    .content { padding: 1.75rem; }
+    .card { border: none; border-radius: .75rem; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+    .table th { font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: #6c757d; }
+    .badge { font-weight: 500; font-size: .78em; }
+
+  </style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="brand"><i class="bi bi-building"></i>Corp Manager</div>
+  <a href="{{ url_for('admin.admin_panel') }}"><i class="bi bi-grid"></i>Dashboard</a>
+  <a href="{{ url_for('attendance.admin_attendance_overview') }}" class="active"><i class="bi bi-calendar-check"></i>Attendance</a>
+  <a href="{{ url_for('leaves.admin_leaves') }}"><i class="bi bi-calendar2-minus"></i>Leaves</a>
+  <a href="{{ url_for('regularization.admin_regularizations') }}"><i class="bi bi-pencil-square"></i>Regularizations</a>
+  <a href="{{ url_for('departments.admin_departments') }}"><i class="bi bi-diagram-3"></i>Departments</a>
+  <a href="{{ url_for('holidays.admin_holidays') }}"><i class="bi bi-sun"></i>Holidays</a>
+  <a href="{{ url_for('attendance.admin_team_summary') }}"><i class="bi bi-bar-chart"></i>Team Summary</a>
+  <a href="{{ url_for('auth.logout') }}" style="margin-top:1rem;"><i class="bi bi-box-arrow-left"></i>Logout</a>
+</nav>
+
+<div class="main">
+  <div class="topbar">
+    <span class="page-title"><i class="bi bi-calendar-check me-2 text-primary"></i>Attendance Overview</span>
+    <div class="d-flex align-items-center gap-2">
+      
+      <small class="text-muted ms-3">Logged in as Admin</small>
+    </div>
+  </div>
+  <div class="content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ 'danger' if category == 'danger' else ('success' if category == 'success' else 'warning') }} alert-dismissible fade show" role="alert">
+          {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endwith %}
+
+    <!-- Summary cards -->
+    <div class="row g-3 mb-4">
+      {% set sc = [('Present','success',summary.get('present',0)+summary.get('completed',0)),
+                   ('Absent','danger',summary.get('absent',0)),
+                   ('Late','warning',summary.get('late',0)),
+                   ('On Leave','primary',summary.get('on_leave',0)),
+                   ('WFH','info',summary.get('wfh',0)),
+                   ('Total','secondary',employees|length)] %}
+      {% for label,color,val in sc %}
+      <div class="col-6 col-md-2">
+        <div class="card p-3 text-center">
+          <small class="text-muted text-uppercase fw-semibold" style="font-size:.7rem;">{{ label }}</small>
+          <div class="fw-bold text-{{ color }}" style="font-size:1.8rem;line-height:1.1;">{{ val }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Date picker -->
+    <div class="card mb-4">
+      <div class="card-body d-flex align-items-center gap-3 flex-wrap">
+        <form method="GET" action="{{ url_for('attendance.admin_attendance_overview') }}" class="d-flex gap-2 align-items-center">
+          <label class="fw-semibold mb-0">📅 Date:</label>
+          <input type="date" name="date" class="form-control form-control-sm" value="{{ view_date }}" style="width:160px;">
+          <button type="submit" class="btn btn-primary btn-sm">View</button>
+        </form>
+        <span class="fw-bold">{{ view_date.strftime('%A, %d %B %Y') if view_date else '' }}</span>
+        {% if is_non_working %}
+          <span class="badge bg-warning text-dark">{{ holiday_name or 'Non-Working Day' }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header bg-white fw-semibold border-bottom py-3">
+        <i class="bi bi-people me-2 text-primary"></i>Employee Attendance — {{ view_date.strftime('%d %B %Y') if view_date else '' }}
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th class="ps-3">#</th><th>Employee</th><th>Department</th>
+                <th class="text-center">Status</th><th class="text-center">Work Type</th>
+                <th class="text-center">Check-In</th><th class="text-center">Check-Out</th>
+                <th class="text-center">Hours</th><th class="text-center">Overtime</th>
+              </tr>
+            </thead>
+            <tbody>
+            {% if employees %}
+              {% for emp in employees %}
+              <tr>
+                <td class="ps-3 text-muted">{{ loop.index }}</td>
+                <td>
+                  <div class="fw-semibold">{{ emp.first_name }} {{ emp.last_name }}</div>
+                  {% if emp.designation %}<small class="text-muted">{{ emp.designation }}</small>{% endif %}
+                </td>
+                <td>{% if emp.dept_name %}<span class="badge bg-primary bg-opacity-10 text-primary">{{ emp.dept_name }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                <td class="text-center">
+                  {% set s = emp.status or '' %}
+                  {% if s in ('Present','Completed') %}<span class="badge bg-success">{{ s }}</span>
+                  {% elif s=='Absent' %}<span class="badge bg-danger">Absent</span>
+                  {% elif s=='On Leave' %}<span class="badge bg-primary">On Leave</span>
+                  {% elif s=='Late' %}<span class="badge bg-warning text-dark">Late</span>
+                  {% elif s=='Holiday' %}<span class="badge bg-warning text-dark">Holiday</span>
+                  {% elif s=='Weekend' %}<span class="badge bg-secondary">Weekend</span>
+                  {% elif s=='Half Day' %}<span class="badge text-white" style="background:#f97316;">Half Day</span>
+                  {% else %}<span class="text-muted">—</span>{% endif %}
+                </td>
+                <td class="text-center">
+                  {% set wt = emp.work_type or 'office' %}
+                  {% if wt=='wfh' %}<span class="badge bg-info">WFH</span>
+                  {% elif wt=='field' %}<span class="badge bg-warning text-dark">Field</span>
+                  {% else %}<span class="badge bg-light text-dark">Office</span>{% endif %}
+                </td>
+                <td class="text-center"><code class="text-secondary">{{ emp.check_in or '—' }}</code></td>
+                <td class="text-center"><code class="text-secondary">{{ emp.check_out or '—' }}</code></td>
+                <td class="text-center fw-semibold">{% if emp.hours_worked is not none %}{{ "%.1f"|format(emp.hours_worked) }}h{% else %}—{% endif %}</td>
+                <td class="text-center">{% if emp.overtime_hours and emp.overtime_hours > 0 %}<span class="text-warning fw-semibold">+{{ "%.1f"|format(emp.overtime_hours) }}h</span>{% else %}—{% endif %}</td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr><td colspan="9" class="text-center py-5 text-muted">No data for this date.</td></tr>
+            {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>

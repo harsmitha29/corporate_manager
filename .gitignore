@@ -1,0 +1,12 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pkl
+*.dat
+*.h5
+*.log
+.env
+.DS_Store
+face_utils/
+*.bak

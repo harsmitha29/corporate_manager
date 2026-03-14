@@ -1,0 +1,393 @@
+/* ================= RESET ================= */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+}
+
+/* ================= BODY & BACKGROUND ================= */
+body {
+    min-height: 100vh;
+    margin: 0;
+    font-family: "Segoe UI", Inter, Arial, sans-serif;
+
+    /* ✅ LIGHT GRAY BACKGROUND */
+    background: #f0f0f0;
+
+    background-attachment: fixed;
+    padding-top: 90px; /* push content BELOW fixed top bar */
+}
+
+/* ================= SIMPLE TOP BAR - NAVY BLUE ================= */
+.simple-top-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 72px;
+
+    display: flex;
+    align-items: center;
+    padding-left: 28px;
+
+    /* ✅ NAVY BLUE GRADIENT - SAME AS ADMIN PANEL */
+    background: linear-gradient(
+        90deg,
+        #1e3a8a 0%,
+        #1e40af 40%,
+        #2563eb 70%,
+        #3b82f6 100%
+    );
+
+    box-shadow: 0 12px 30px rgba(30, 58, 138, 0.35);
+    z-index: 1000;
+}
+
+/* ===== TITLE TEXT ===== */
+.top-bar-title {
+    color: #ffffff;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    font-family: "Segoe UI", Inter, Arial, sans-serif;
+}
+
+/* ================= PAGE WRAPPER / CONTAINER ================= */
+.container, .page-wrapper {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    margin-bottom: 20px;
+    padding-top: 40px;
+}
+
+/* ================= CARD STYLING ================= */
+.user-card, .attendance-card, .edit-card {
+    background: #ffffff !important;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.15) !important;
+    border: none !important;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.user-card:hover, .attendance-card:hover, .edit-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+}
+
+/* ================= HEADINGS ================= */
+h2, h3 {
+    margin-bottom: 20px;
+    font-size: 1.5rem;
+    color: #1f2937;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 8px;
+    letter-spacing: 0.5px;
+}
+
+/* ================= TABLE STYLING ================= */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #f9fafb;
+    margin-bottom: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    font-size: 13px;
+}
+
+table th, table td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+table th {
+    background: #eef2ff !important;
+    color: #312e81 !important;
+}
+
+table td {
+    background: #ffffff;
+    color: #1f2937;
+}
+
+table tr:nth-child(even) td {
+    background: #f3f4f6;
+}
+
+table tr:hover td {
+    background: #dbeafe;
+    transition: all 0.2s ease;
+}
+
+/* ================= FORM STYLING ================= */
+form {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 15px 20px;
+    margin-bottom: 20px;
+}
+
+form label {
+    font-weight: 600;
+    color: #4b5563;
+    align-self: center;
+}
+
+form input, form select, form textarea {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    background: #f9fafb;
+    font-size: 0.95rem;
+    width: 100%;
+    transition: all 0.3s ease;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.03);
+}
+
+form input:focus,
+form select:focus,
+form textarea:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 6px rgba(37, 99, 235, 0.25);
+    background: #ffffff;
+}
+
+/* ================= BUTTONS ================= */
+button, .btn, .back-link {
+    padding: 10px 22px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+    display: inline-block;
+    text-decoration: none;
+    text-align: center;
+}
+
+/* ✅ ALL Primary/Submit Buttons - GREEN */
+button.submit-btn,
+.btn-primary,
+button[type="submit"] {
+    background: linear-gradient(135deg, #16a34a, #22c55e) !important;
+    border: none !important;
+    color: #ffffff !important;
+}
+
+button.submit-btn:hover,
+.btn-primary:hover,
+button[type="submit"]:hover {
+    background: linear-gradient(135deg, #22c55e, #16a34a) !important;
+}
+
+/* Secondary Buttons / Back Links */
+button.back-btn, .back-link {
+    background: #ffffff;
+    color: #6b7280;
+    border: 1px solid #d1d5db;
+}
+
+button.back-btn:hover, .back-link:hover {
+    background: #f3f4f6;
+    border-color: #a1a1aa;
+}
+
+/* ================= ICON BUTTONS ================= */
+.icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    font-size: 1rem;
+    color: #fff;
+    margin-right: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.08);
+}
+
+.icon-btn.edit { background: #2563eb; }
+.icon-btn.edit:hover { background: #3b82f6; }
+
+.icon-btn.view { background: #10b981; }
+.icon-btn.view:hover { background: #34d399; }
+
+.icon-btn.delete { background: #ef4444; }
+.icon-btn.delete:hover { background: #f87171; }
+
+/* ================= FLASH MESSAGES ================= */
+.flash-message {
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+.flash-message.success { background: #d1fae5; color: #065f46; }
+.flash-message.error { background: #fee2e2; color: #991b1b; }
+
+/* ================= EMPTY TEXT ================= */
+.empty-text {
+    color: #9ca3af;
+    font-size: 0.9rem;
+    text-align: center;
+    padding: 15px 0;
+}
+
+/* ================= PAGINATION ================= */
+.pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    font-size: 0.9rem;
+}
+
+.pagination a {
+    padding: 6px 14px;
+    border-radius: 6px;
+    background: #f3f4f6;
+    color: #1f2937;
+    text-decoration: none;
+    font-weight: 500;
+    border: 1px solid #d1d5db;
+    transition: all 0.3s ease;
+}
+
+.pagination a:hover {
+    background: #dbeafe;
+    border-color: #2563eb;
+}
+
+.pagination a.disabled {
+    background: #f9fafb;
+    color: #9ca3af;
+    cursor: default;
+    border-color: #e5e7eb;
+}
+
+/* ================= EDIT USER SPECIFIC ================= */
+.edit-user-container {
+    display: flex;
+    justify-content: center;
+}
+
+.edit-card {
+    width: 100%;
+    max-width: 560px;
+    padding: 30px;
+    border-radius: 14px;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: 24px;
+}
+
+/* Back button */
+.back-btn {
+    flex: 1;
+    text-align: center;
+    padding: 12px 0;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    text-decoration: none;
+    color: #374151;
+    font-weight: 500;
+    background: #ffffff;
+}
+
+/* ✅ Submit button - GREEN */
+.submit-btn {
+    flex: 1;
+    padding: 12px 0;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #16a34a, #22c55e);
+    color: #ffffff;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* Hover effects */
+.back-btn:hover {
+    background: #f3f4f6;
+}
+
+/* ✅ Submit hover - GREEN */
+.submit-btn:hover {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+}
+
+/* ================= PAGINATION CONTAINER ================= */
+.pagination-container {
+    margin-top: 25px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+.page-btn {
+    padding: 8px 14px;
+    background: #ffffff;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #6c757d;
+    font-weight: 600;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.05);
+    transition: all 0.2s ease;
+}
+
+.page-btn:hover {
+    background: #f3f4f6;
+    color: #2563eb;
+}
+
+.page-info {
+    padding: 8px 18px;
+    background: #ffffff;
+    border-radius: 8px;
+    font-weight: 600;
+    color: #374151;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.05);
+}
+
+.page-btn.disabled {
+    pointer-events: none;
+    opacity: 0.4;
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 768px) {
+    .container, .page-wrapper {
+        padding: 15px 10px;
+    }
+
+    table th, table td {
+        padding: 8px 6px;
+        font-size: 12px;
+    }
+
+    form {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    button, .btn, .back-link {
+        width: 100%;
+    }
+}

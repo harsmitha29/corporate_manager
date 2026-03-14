@@ -1,0 +1,92 @@
+/* ================= BODY ================= */
+body {
+    min-height: 100vh;
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    padding-top: 90px;
+
+    background-color: #F6E0F6;   /* your selected color */
+    color: #0f172a;
+}
+
+
+/* ================= NAVBAR ================= */
+.navbar {
+    background: linear-gradient(
+        90deg,
+        #0e1092
+    );
+    box-shadow: 0 10px 28px rgba(73, 28, 186, 0.35);
+}
+
+/* ================= CONTAINER ================= */
+.dashboard-container {
+    max-width: 1600px;
+    margin: 40px auto;
+    padding: 0 32px;
+}
+
+/* ================= CARD ================= */
+.attendance-table-card {
+    width: 100%;
+    background: rgba(255,255,255,0.78);
+    backdrop-filter: blur(18px);
+    padding: 40px;
+    border-radius: 28px;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.12);
+}
+
+/* ================= TABLE ================= */
+.table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 18px;
+}
+
+.table thead th {
+    font-size: 17px;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    text-align: center;
+    padding: 18px;
+}
+
+.table tbody tr {
+    background: #ffffff;
+    border-radius: 18px;
+    box-shadow: 0 10px 28px rgba(0,0,0,0.08);
+    transition: all .25s ease;
+}
+
+.table tbody tr:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 45px rgba(0,0,0,0.14);
+}
+
+.table td {
+    padding: 18px 22px;
+    text-align: center;
+    font-size: 15px;
+}
+
+/* ================= BADGES ================= */
+.badge {
+    padding: 8px 18px;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+/* ================= USER INITIALS ================= */
+.user-initials {
+    width: 42px;
+    height: 42px;
+    background: #ffffff;
+    color: #2563eb;
+    font-weight: 700;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}

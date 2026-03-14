@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Regularizations</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    body { background: #f5f7fb; font-family: 'Segoe UI', sans-serif; }
+    .sidebar {
+      width: 220px; min-height: 100vh; background: #1e2a3a;
+      position: fixed; top: 0; left: 0; z-index: 100;
+      padding: 1.5rem 0;
+    }
+    .sidebar .brand {
+      color: #fff; font-weight: 700; font-size: 1.1rem;
+      padding: 0 1.25rem 1.5rem; border-bottom: 1px solid #2d3f54;
+      margin-bottom: 1rem; display: flex; align-items: center; gap: .5rem;
+    }
+    .sidebar a {
+      display: flex; align-items: center; gap: .6rem;
+      color: #a0b0c0; text-decoration: none; padding: .55rem 1.25rem;
+      font-size: .9rem; transition: background .15s, color .15s;
+    }
+    .sidebar a:hover, .sidebar a.active { background: #2d3f54; color: #fff; }
+    .sidebar a i { font-size: 1rem; }
+    .main { margin-left: 220px; min-height: 100vh; }
+    .topbar {
+      background: #fff; border-bottom: 1px solid #e9ecef;
+      padding: .75rem 1.75rem; display: flex;
+      align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 90;
+    }
+    .topbar .page-title { font-weight: 600; font-size: 1.05rem; color: #1e2a3a; }
+    .content { padding: 1.75rem; }
+    .card { border: none; border-radius: .75rem; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+    .table th { font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: #6c757d; }
+    .badge { font-weight: 500; font-size: .78em; }
+.nav-tabs .nav-link{color:#6c757d;border-radius:6px 6px 0 0;}.nav-tabs .nav-link.active{color:#0d6efd;font-weight:600;}
+  </style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="brand"><i class="bi bi-building"></i>Corp Manager</div>
+  <a href="{{ url_for('admin.admin_panel') }}"><i class="bi bi-grid"></i>Dashboard</a>
+  <a href="{{ url_for('attendance.admin_attendance_overview') }}"><i class="bi bi-calendar-check"></i>Attendance</a>
+  <a href="{{ url_for('leaves.admin_leaves') }}"><i class="bi bi-calendar2-minus"></i>Leaves</a>
+  <a href="{{ url_for('regularization.admin_regularizations') }}" class="active"><i class="bi bi-pencil-square"></i>Regularizations</a>
+  <a href="{{ url_for('departments.admin_departments') }}"><i class="bi bi-diagram-3"></i>Departments</a>
+  <a href="{{ url_for('holidays.admin_holidays') }}"><i class="bi bi-sun"></i>Holidays</a>
+  <a href="{{ url_for('attendance.admin_team_summary') }}"><i class="bi bi-bar-chart"></i>Team Summary</a>
+  <a href="{{ url_for('auth.logout') }}" style="margin-top:1rem;"><i class="bi bi-box-arrow-left"></i>Logout</a>
+</nav>
+
+<div class="main">
+  <div class="topbar">
+    <span class="page-title"><i class="bi bi-pencil-square me-2 text-primary"></i>Regularization Requests</span>
+    <div class="d-flex align-items-center gap-2">
+      
+      <small class="text-muted ms-3">Logged in as Admin</small>
+    </div>
+  </div>
+  <div class="content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ 'danger' if category == 'danger' else ('success' if category == 'success' else 'warning') }} alert-dismissible fade show" role="alert">
+          {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endwith %}
+
+    <ul class="nav nav-tabs mb-4">
+      {% for s in statuses %}
+      <li class="nav-item">
+        <a class="nav-link {% if s==status_filter %}active{% endif %}"
+           href="{{ url_for('regularization.admin_regularizations', status=s) }}">{{ s }}</a>
+      </li>
+      {% endfor %}
+    </ul>
+
+    <div class="card">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th class="ps-3">#</th><th>Employee</th><th class="text-center">Date</th>
+                <th class="text-center">Req. In</th><th class="text-center">Req. Out</th>
+                <th class="text-center">Att. Status</th><th>Reason</th><th>Submitted</th>
+                {% if status_filter=='Pending' %}<th class="text-center">Action</th>{% endif %}
+              </tr>
+            </thead>
+            <tbody>
+            {% if requests %}
+              {% for r in requests %}
+              <tr>
+                <td class="ps-3 text-muted">{{ loop.index }}</td>
+                <td>
+                  <div class="fw-semibold">{{ r.first_name }} {{ r.last_name }}</div>
+                  <small class="text-muted">{{ r.email }}</small>
+                </td>
+                <td class="text-center">{{ r.reg_date.strftime('%d %b %Y') if r.reg_date else '—' }}</td>
+                <td class="text-center"><code>{{ r.requested_in or '—' }}</code></td>
+                <td class="text-center"><code>{{ r.requested_out or '—' }}</code></td>
+                <td class="text-center">{% if r.att_status %}<span class="badge bg-secondary">{{ r.att_status }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                <td style="max-width:180px;"><small class="text-muted">{{ r.reason }}</small></td>
+                <td><small class="text-muted">{{ r.applied_at.strftime('%d %b %Y') if r.applied_at else '—' }}</small></td>
+                {% if status_filter=='Pending' %}
+                <td class="text-center">
+                  <form method="POST" action="{{ url_for('regularization.admin_regularization_action', reg_id=r.id) }}"
+                        class="d-flex gap-1 justify-content-center align-items-center flex-nowrap">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="text" name="admin_comment" class="form-control form-control-sm" placeholder="Comment" style="width:120px;">
+                    <button type="submit" name="action" value="approve" class="btn btn-sm btn-success"><i class="bi bi-check-lg"></i></button>
+                    <button type="submit" name="action" value="reject"  class="btn btn-sm btn-danger"><i class="bi bi-x-lg"></i></button>
+                  </form>
+                </td>
+                {% endif %}
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr><td colspan="{% if status_filter=='Pending' %}9{% else %}8{% endif %}" class="text-center py-5 text-muted">
+                <i class="bi bi-inbox fs-1 d-block mb-2"></i>No {{ status_filter.lower() }} requests.
+              </td></tr>
+            {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>

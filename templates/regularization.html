@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Regularization</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    body { background: #f5f7fb; font-family: 'Segoe UI', sans-serif; }
+    .sidebar {
+      width: 220px; min-height: 100vh; background: #1e2a3a;
+      position: fixed; top: 0; left: 0; z-index: 100;
+      padding: 1.5rem 0;
+    }
+    .sidebar .brand {
+      color: #fff; font-weight: 700; font-size: 1.1rem;
+      padding: 0 1.25rem 1.5rem; border-bottom: 1px solid #2d3f54;
+      margin-bottom: 1rem; display: flex; align-items: center; gap: .5rem;
+    }
+    .sidebar a {
+      display: flex; align-items: center; gap: .6rem;
+      color: #a0b0c0; text-decoration: none; padding: .55rem 1.25rem;
+      font-size: .9rem; transition: background .15s, color .15s;
+    }
+    .sidebar a:hover, .sidebar a.active { background: #2d3f54; color: #fff; }
+    .sidebar a i { font-size: 1rem; }
+    .main { margin-left: 220px; min-height: 100vh; }
+    .topbar {
+      background: #fff; border-bottom: 1px solid #e9ecef;
+      padding: .75rem 1.75rem; display: flex;
+      align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 90;
+    }
+    .topbar .page-title { font-weight: 600; font-size: 1.05rem; color: #1e2a3a; }
+    .content { padding: 1.75rem; }
+    .card { border: none; border-radius: .75rem; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+    .table th { font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: #6c757d; }
+    .badge { font-weight: 500; font-size: .78em; }
+
+  </style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="brand"><i class="bi bi-building"></i>Corp Manager</div>
+  <a href="{{ url_for('attendance.user_dashboard') }}"><i class="bi bi-house"></i>Dashboard</a>
+  <a href="{{ url_for('leaves.leaves') }}"><i class="bi bi-calendar2-minus"></i>Leaves</a>
+  <a href="{{ url_for('regularization.regularization') }}" class="active"><i class="bi bi-pencil-square"></i>Regularization</a>
+  <a href="{{ url_for('daily_updates.all_daily_updates') }}"><i class="bi bi-journal-text"></i>Daily Updates</a>
+  <a href="{{ url_for('profile.profile') }}"><i class="bi bi-person"></i>Profile</a>
+  <a href="{{ url_for('auth.logout') }}" style="margin-top:1rem;"><i class="bi bi-box-arrow-left"></i>Logout</a>
+</nav>
+
+<div class="main">
+  <div class="topbar">
+    <span class="page-title"><i class="bi bi-pencil-square me-2 text-primary"></i>Attendance Regularization</span>
+    <div class="d-flex align-items-center gap-2">
+      
+      <small class="text-muted ms-3">Logged in as {{ session.get('first_name','User') }}</small>
+    </div>
+  </div>
+  <div class="content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ 'danger' if category == 'danger' else ('success' if category == 'success' else 'warning') }} alert-dismissible fade show" role="alert">
+          {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endwith %}
+
+    <div class="alert alert-info border-0 mb-4">
+      <i class="bi bi-info-circle me-2"></i>
+      Use regularization to correct missed or incorrect check-in/check-out entries from past working days. Requests are subject to admin approval.
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header bg-white fw-semibold border-bottom py-3">
+        <i class="bi bi-plus-circle me-2 text-primary"></i>Submit Request
+      </div>
+      <div class="card-body">
+        <form method="POST" action="{{ url_for('regularization.regularization') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="row g-3 align-items-end">
+            <div class="col-md-2">
+              <label class="form-label fw-semibold">Date</label>
+              <input type="date" name="reg_date" class="form-control" max="{{ today }}" required>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label fw-semibold">Corrected Check-In</label>
+              <input type="time" name="requested_in" class="form-control" step="60">
+            </div>
+            <div class="col-md-2">
+              <label class="form-label fw-semibold">Corrected Check-Out</label>
+              <input type="time" name="requested_out" class="form-control" step="60">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Reason *</label>
+              <input type="text" name="reason" class="form-control" placeholder="Explain why correction is needed…" required>
+            </div>
+            <div class="col-md-2">
+              <button type="submit" class="btn btn-primary w-100"><i class="bi bi-send"></i> Submit</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header bg-white fw-semibold border-bottom py-3">
+        <i class="bi bi-clock-history me-2 text-primary"></i>My Requests
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th class="ps-3">#</th><th>Date</th><th class="text-center">Req. In</th>
+                <th class="text-center">Req. Out</th><th>Reason</th>
+                <th class="text-center">Status</th><th>Admin Comment</th><th>Submitted</th>
+              </tr>
+            </thead>
+            <tbody>
+            {% if requests %}
+              {% for r in requests %}
+              <tr>
+                <td class="ps-3 text-muted">{{ loop.index }}</td>
+                <td>{{ r.reg_date.strftime('%d-%m-%Y') if r.reg_date else '—' }}</td>
+                <td class="text-center"><code>{{ r.requested_in or '—' }}</code></td>
+                <td class="text-center"><code>{{ r.requested_out or '—' }}</code></td>
+                <td style="max-width:200px;"><small class="text-muted">{{ r.reason }}</small></td>
+                <td class="text-center">
+                  {% if r.status=='Pending' %}<span class="badge bg-warning text-dark">Pending</span>
+                  {% elif r.status=='Approved' %}<span class="badge bg-success">Approved</span>
+                  {% else %}<span class="badge bg-danger">Rejected</span>{% endif %}
+                </td>
+                <td><small class="text-muted">{{ r.admin_comment or '—' }}</small></td>
+                <td><small class="text-muted">{{ r.applied_at.strftime('%d-%m-%Y') if r.applied_at else '—' }}</small></td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr><td colspan="8" class="text-center py-5 text-muted">No requests yet.</td></tr>
+            {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add Employee</title>
+</head>
+<body>
+    <h2>Add Employee</h2>
+    <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label>Name:</label><br>
+        <input type="text" name="user_name" required><br>
+        <label>Email:</label><br>
+        <input type="email" name="email" required><br>
+        <label>Password:</label><br>
+        <input type="password" name="password" required><br><br>
+        <button type="submit">Add Employee</button>
+    </form
+    <br>
+    <a href="{{ url_for('admin.admin_panel') }}">Back to Admin Panel</a>
+</body>
+</html>

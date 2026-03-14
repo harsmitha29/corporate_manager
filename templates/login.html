@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+</head>
+<body>
+  
+
+<div class="page-wrapper">
+    <div class="card">
+        <h2>Login</h2>
+
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="email" name="email" placeholder="Email" required>
+            <input type="password" name="password" placeholder="Password" required>
+           
+
+<p id="password-warning" style="color:red; font-size:14px;"></p>
+
+
+
+            <button type="submit">login</button>
+        </form>
+        <p class="signup-text">Contact your administrator to get an account.</p>
+    </div>
+</div>
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  {% for category, message in messages %}
+
+    {% if category == 'success' %}
+      // ✅ SUCCESS (auto redirect, no OK)
+      Swal.fire({
+        icon: 'success',
+        text: "{{ message }}",
+        width: 360,
+        showConfirmButton: false,   // ❌ no OK
+        timer: 1200,                // ⏱️ auto close
+        timerProgressBar: true,
+        backdrop: true,
+        didClose: () => {
+          window.location.href = "{{ url_for('auth.login') }}";
+        }
+      });
+
+    {% else %}
+      // ❌ ERROR / WARNING (manual OK)
+      Swal.fire({
+        icon: "{{ 'warning' if category == 'warning' else 'error' }}",
+        text: "{{ message }}",
+        width: 360,
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#e53935',
+        backdrop: true,
+        allowOutsideClick: false
+      });
+    {% endif %}
+
+  {% endfor %}
+});
+</script>
+{% endif %}
+{% endwith %}
+
+
+
+
+</body>
+</html>

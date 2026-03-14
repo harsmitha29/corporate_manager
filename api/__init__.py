@@ -1,0 +1,30 @@
+"""
+api/__init__.py
+Registers every Blueprint onto the Flask app.
+Call register_blueprints(app) from app.py.
+"""
+from api.auth            import auth_bp
+from api.admin           import admin_bp
+from api.attendance      import attendance_bp
+from api.leaves          import leaves_bp
+from api.daily_updates   import daily_updates_bp
+from api.regularization  import regularization_bp
+from api.self_assessment import self_assessment_bp
+from api.departments     import departments_bp
+from api.holidays        import holidays_bp
+from api.profile         import profile_bp
+from api.reports         import reports_bp
+
+
+def register_blueprints(app) -> None:
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(admin_bp)
+    app.register_blueprint(attendance_bp)
+    app.register_blueprint(leaves_bp)
+    app.register_blueprint(daily_updates_bp)
+    app.register_blueprint(regularization_bp)
+    app.register_blueprint(self_assessment_bp)
+    app.register_blueprint(departments_bp)
+    app.register_blueprint(holidays_bp)
+    app.register_blueprint(profile_bp)
+    app.register_blueprint(reports_bp)

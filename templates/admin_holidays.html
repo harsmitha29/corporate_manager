@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Holiday Calendar</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    body { background:#f5f7fb; font-family:'Segoe UI',sans-serif; margin:0; }
+    .sidebar { width:220px; min-height:100vh; background:#1e2a3a; position:fixed; top:0; left:0; z-index:100; padding:1.5rem 0; }
+    .sidebar .brand { color:#fff; font-weight:700; font-size:1.1rem; padding:0 1.25rem 1.5rem; border-bottom:1px solid #2d3f54; margin-bottom:1rem; display:flex; align-items:center; gap:.5rem; }
+    .sidebar a { display:flex; align-items:center; gap:.6rem; color:#a0b0c0; text-decoration:none; padding:.55rem 1.25rem; font-size:.9rem; transition:background .15s,color .15s; }
+    .sidebar a:hover,.sidebar a.active { background:#2d3f54; color:#fff; }
+    .sidebar a i { font-size:1rem; }
+    .main { margin-left:220px; min-height:100vh; display:flex; flex-direction:column; }
+    .topbar { background:#fff; border-bottom:1px solid #e9ecef; padding:.75rem 1.75rem; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:90; }
+    .topbar .page-title { font-weight:600; font-size:1.05rem; color:#1e2a3a; }
+    .content { padding:1.25rem 1.5rem; flex:1; display:flex; flex-direction:column; gap:.75rem; }
+    .layout { display:grid; grid-template-columns:280px 1fr; gap:1rem; flex:1; min-height:500px; }
+    .left-panel,.right-panel { background:#fff; border-radius:.75rem; box-shadow:0 2px 12px rgba(0,0,0,.06); display:flex; flex-direction:column; overflow:hidden; }
+    .panel-header,.right-header { padding:.7rem 1rem; border-bottom:1px solid #e9ecef; font-size:.88rem; font-weight:700; color:#1e2a3a; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+    .panel-body { padding:1rem; overflow-y:auto; flex:1; min-height:0; }
+    .panel-body::-webkit-scrollbar { width:4px; }
+    .panel-body::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:4px; }
+    .form-group { margin-bottom:.7rem; }
+    .form-lbl { display:block; font-size:.7rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.06em; margin-bottom:.2rem; }
+    .fc { width:100%; padding:.42rem .6rem; border:1.5px solid #e2e8f0; border-radius:6px; background:#f8faff; color:#1e293b; font-size:.83rem; outline:none; transition:border-color .2s; box-sizing:border-box; }
+    .fc:focus { border-color:#2563eb; background:#fff; }
+    select.fc { cursor:pointer; }
+    .type-grid { display:grid; grid-template-columns:1fr 1fr; gap:5px; }
+    .type-option { display:none; }
+    .type-label { display:flex; align-items:center; justify-content:center; gap:4px; padding:6px 4px; border:1.5px solid #e2e8f0; border-radius:7px; font-size:.75rem; font-weight:600; color:#64748b; cursor:pointer; background:#f8faff; transition:all .15s; }
+    .type-option:checked + .type-label { border-color:#2563eb; background:#eff6ff; color:#2563eb; }
+    .type-label:hover { border-color:#93c5fd; }
+    .submit-btn { width:100%; padding:.48rem; background:#2563eb; color:#fff; border:none; border-radius:7px; font-size:.85rem; font-weight:700; cursor:pointer; margin-top:.35rem; transition:background .2s; }
+    .submit-btn:hover { background:#1d4ed8; }
+    /* Mini calendar */
+    .cal-section { margin-top:.9rem; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; }
+    .cal-scroll { max-height:230px; overflow-y:auto; padding:8px; background:#fafbff; scrollbar-width:thin; scrollbar-color:#cbd5e1 #f1f5f9; }
+    .cal-scroll::-webkit-scrollbar { width:4px; }
+    .cal-scroll::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:4px; }
+    .cal-month-title { font-size:.68rem; font-weight:700; color:#1e293b; text-transform:uppercase; letter-spacing:.05em; margin:7px 0 2px; padding-bottom:3px; border-bottom:1px solid #e2e8f0; }
+    .cal-month-title:first-child { margin-top:0; }
+    .mini-cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:1px; }
+    .cal-day-head { text-align:center; font-size:.55rem; font-weight:700; color:#94a3b8; padding:1px 0; }
+    .cal-cell { text-align:center; font-size:.65rem; padding:1px; border-radius:4px; min-height:18px; display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1.1; }
+    .cal-cell.empty { background:transparent; }
+    .cal-cell.normal { color:#334155; }
+    .cal-cell.weekend { background:#f1f5f9; color:#94a3b8; }
+    .cal-cell.holiday { background:#eff6ff; color:#2563eb; font-weight:700; cursor:pointer; border:1px solid #bfdbfe; }
+    .cal-cell.holiday:hover { background:#dbeafe; }
+    .cal-cell .cal-num { font-size:.65rem; font-weight:600; }
+    .cal-cell .cal-name { font-size:.5rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:28px; }
+    /* Right panel */
+    .right-title { font-size:.9rem; font-weight:700; color:#1e293b; }
+    .year-select { padding:.38rem .6rem; border:1.5px solid #e2e8f0; border-radius:6px; background:#f8faff; color:#334155; font-size:.82rem; font-weight:500; cursor:pointer; outline:none; }
+    .table-container { flex:1; overflow-y:auto; min-height:0; }
+    .table-container::-webkit-scrollbar { width:5px; }
+    .table-container::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:4px; }
+    table { width:100%; border-collapse:collapse; font-size:.84rem; }
+    thead th { position:sticky; top:0; z-index:2; background:#f4f6fb; color:#64748b; font-weight:700; font-size:.7rem; text-transform:uppercase; letter-spacing:.07em; padding:.65rem 1rem; border-bottom:2px solid #e2e8f0; text-align:left; white-space:nowrap; }
+    thead th.c { text-align:center; }
+    tbody td { padding:.72rem 1rem; border-bottom:1px solid #f1f5f9; color:#334155; vertical-align:middle; }
+    tbody td.c { text-align:center; }
+    tbody tr:last-child td { border-bottom:none; }
+    tbody tr:hover td { background:#f8faff; }
+    .slno-cell { color:#94a3b8; font-weight:600; font-size:.78rem; }
+    .day-label { font-size:.75rem; color:#94a3b8; font-weight:500; }
+    .name-cell { font-weight:600; font-size:.88rem; }
+    .type-chip { display:inline-block; padding:2px 9px; border-radius:999px; font-size:.72rem; font-weight:700; }
+    .t-National { background:#fff7ed; color:#c2410c; }
+    .t-Regional { background:#fdf4ff; color:#9333ea; }
+    .t-Company  { background:#eff6ff; color:#2563eb; }
+    .t-Optional { background:#f0fdf4; color:#16a34a; }
+    .action-btn { width:27px; height:27px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; font-size:.78rem; border:none; cursor:pointer; transition:all .15s; }
+    .btn-edit   { background:#dcfce7; color:#16a34a; }
+    .btn-edit:hover   { background:#16a34a; color:#fff; transform:translateY(-1px); }
+    .btn-delete { background:#fee2e2; color:#dc2626; }
+    .btn-delete:hover { background:#dc2626; color:#fff; transform:translateY(-1px); }
+    .empty-state { text-align:center; padding:3rem 1.25rem; color:#94a3b8; font-size:.86rem; line-height:1.8; }
+    /* Pagination */
+    .pagination-bar { padding:.6rem 1rem; border-top:1px solid #e2e8f0; display:flex; align-items:center; justify-content:center; gap:4px; flex-shrink:0; }
+    .page-btn { padding:.3rem .75rem; border-radius:6px; background:#f1f5f9; color:#475569; font-weight:600; font-size:.78rem; border:1px solid #e2e8f0; cursor:pointer; transition:all .15s; }
+    .page-btn:hover:not([disabled]):not(.active) { background:#dbeafe; color:#1d4ed8; border-color:#bfdbfe; }
+    .page-btn.active { background:#1e3a8a; color:#fff; border-color:#1e3a8a; pointer-events:none; }
+    .page-btn[disabled] { opacity:.35; cursor:default; }
+    .page-info { font-size:.75rem; color:#64748b; font-weight:500; padding:0 4px; }
+    /* Modal */
+    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:200; align-items:center; justify-content:center; }
+    .modal-overlay.open { display:flex; }
+    .modal-box { background:#fff; border-radius:12px; width:380px; box-shadow:0 25px 60px rgba(0,0,0,.22); overflow:hidden; animation:popIn .16s ease; }
+    @keyframes popIn { from{opacity:0;transform:scale(.94) translateY(8px)} to{opacity:1;transform:scale(1) translateY(0)} }
+    .modal-hd { padding:.85rem 1rem; background:linear-gradient(90deg,#1e3a8a,#2563eb); color:#fff; font-size:.9rem; font-weight:700; display:flex; align-items:center; justify-content:space-between; }
+    .modal-close { background:rgba(255,255,255,.2); border:none; color:#fff; width:25px; height:25px; border-radius:6px; cursor:pointer; font-size:.9rem; display:flex; align-items:center; justify-content:center; }
+    .modal-bd { padding:1rem; }
+    .modal-ft { padding:.7rem 1rem; border-top:1px solid #e2e8f0; display:flex; justify-content:flex-end; }
+  </style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="brand"><i class="bi bi-building"></i>Corp Manager</div>
+  <a href="{{ url_for('admin.admin_panel') }}"><i class="bi bi-grid"></i>Dashboard</a>
+  <a href="{{ url_for('attendance.admin_attendance_overview') }}"><i class="bi bi-calendar-check"></i>Attendance</a>
+  <a href="{{ url_for('leaves.admin_leaves') }}"><i class="bi bi-calendar2-minus"></i>Leaves</a>
+  <a href="{{ url_for('regularization.admin_regularizations') }}"><i class="bi bi-pencil-square"></i>Regularizations</a>
+  <a href="{{ url_for('departments.admin_departments') }}"><i class="bi bi-diagram-3"></i>Departments</a>
+  <a href="{{ url_for('holidays.admin_holidays') }}" class="active"><i class="bi bi-sun"></i>Holidays</a>
+  <a href="{{ url_for('attendance.admin_team_summary') }}"><i class="bi bi-bar-chart"></i>Team Summary</a>
+  <a href="{{ url_for('auth.logout') }}" style="margin-top:1rem;"><i class="bi bi-box-arrow-left"></i>Logout</a>
+</nav>
+
+<div class="main">
+  <div class="topbar">
+    <span class="page-title"><i class="bi bi-sun me-2 text-primary"></i>Holiday Calendar</span>
+    <small class="text-muted">Logged in as Admin</small>
+  </div>
+  <div class="content">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ 'danger' if category=='danger' else ('success' if category=='success' else 'warning') }} alert-dismissible fade show mb-0" role="alert">
+          {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endwith %}
+
+    <div class="layout">
+
+      <!-- LEFT: Add Form -->
+      <div class="left-panel">
+        <div class="panel-header">
+          <span><i class="bi bi-plus-circle text-primary me-1"></i>Add Holiday</span>
+        </div>
+        <div class="panel-body">
+          <form method="POST" action="{{ url_for('holidays.admin_holiday_add') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="form-group">
+              <label class="form-lbl">Date</label>
+              <input type="date" name="holiday_date" class="fc" required
+                     min="{{ selected_year }}-01-01" max="{{ selected_year }}-12-31">
+            </div>
+            <div class="form-group">
+              <label class="form-lbl">Holiday Name</label>
+              <input type="text" name="holiday_name" class="fc" placeholder="e.g. Diwali" required maxlength="150">
+            </div>
+            <div class="form-group">
+              <label class="form-lbl">Type</label>
+              <div class="type-grid">
+                <div><input type="radio" name="holiday_type" id="t-national" value="National" class="type-option"><label for="t-national" class="type-label">🇮🇳 National</label></div>
+                <div><input type="radio" name="holiday_type" id="t-regional" value="Regional" class="type-option"><label for="t-regional" class="type-label">🌏 Regional</label></div>
+                <div><input type="radio" name="holiday_type" id="t-company"  value="Company"  class="type-option" checked><label for="t-company" class="type-label">🏢 Company</label></div>
+                <div><input type="radio" name="holiday_type" id="t-optional" value="Optional" class="type-option"><label for="t-optional" class="type-label">✅ Optional</label></div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-lbl">Description <small style="color:#94a3b8;font-weight:400;text-transform:none;">(optional)</small></label>
+              <input type="text" name="description" class="fc" placeholder="Brief note" maxlength="300">
+            </div>
+            <button type="submit" class="submit-btn"><i class="bi bi-plus-lg me-1"></i>Add Holiday</button>
+          </form>
+          <div class="cal-section">
+            <div class="cal-scroll" id="miniCalendar"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Table -->
+      <div class="right-panel">
+        <div class="right-header">
+          <span class="right-title">
+            <i class="bi bi-calendar3 me-1 text-primary"></i>{{ selected_year }} Holidays
+            <span style="color:#64748b;font-weight:500;font-size:.78rem;">({{ holidays|length }} total)</span>
+          </span>
+          <select class="year-select" onchange="changeYear(this.value)">
+            {% for y in year_range %}
+            <option value="{{ y }}" {% if y==selected_year %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:5%">Sl.No</th>
+                <th style="width:16%">Date</th>
+                <th style="width:8%">Day</th>
+                <th style="width:42%">Holiday Name</th>
+                <th class="c" style="width:13%">Type</th>
+                <th class="c" style="width:8%">Edit</th>
+                <th class="c" style="width:8%">Delete</th>
+              </tr>
+            </thead>
+            <tbody id="holidayTableBody"></tbody>
+          </table>
+        </div>
+        <div class="pagination-bar" id="paginationBar"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal-box">
+    <div class="modal-hd">
+      <span><i class="bi bi-pencil me-1"></i>Edit Holiday</span>
+      <button class="modal-close" onclick="closeEdit()">✕</button>
+    </div>
+    <div class="modal-bd">
+      <form method="POST" id="editForm" action="">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group">
+          <label class="form-lbl">Date</label>
+          <input type="date" name="holiday_date" id="edit_date" class="fc" required>
+        </div>
+        <div class="form-group">
+          <label class="form-lbl">Holiday Name</label>
+          <input type="text" name="holiday_name" id="edit_name" class="fc" required maxlength="150">
+        </div>
+        <div class="form-group">
+          <label class="form-lbl">Type</label>
+          <select name="holiday_type" id="edit_type" class="fc">
+            {% for t in holiday_types %}
+            <option value="{{ t }}">{{ t }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-lbl">Description <small style="color:#94a3b8;font-weight:400;text-transform:none;">(optional)</small></label>
+          <input type="text" name="description" id="edit_desc" class="fc" placeholder="Brief note" maxlength="300">
+        </div>
+        <div class="modal-ft" style="padding:0;border:none;margin-top:.5rem;">
+          <button type="button" onclick="closeEdit()" style="padding:.4rem 1rem;border:1.5px solid #e2e8f0;border-radius:7px;background:#fff;color:#64748b;font-size:.83rem;font-weight:600;cursor:pointer;margin-right:.5rem;">Cancel</button>
+          <button type="submit" class="submit-btn" style="width:auto;padding:.4rem 1.2rem;">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+<script>
+  function changeYear(y) { window.location.href = "{{ url_for('holidays.admin_holidays') }}?year=" + y; }
+
+  function openEdit(id, date, name, type, desc) {
+    document.getElementById('editForm').action = "/admin/holidays/" + id + "/edit";
+    document.getElementById('edit_date').value  = date;
+    document.getElementById('edit_name').value  = name;
+    document.getElementById('edit_type').value  = type;
+    document.getElementById('edit_desc').value  = desc || '';
+    document.getElementById('editModal').classList.add('open');
+  }
+  function closeEdit() { document.getElementById('editModal').classList.remove('open'); }
+  document.getElementById('editModal').addEventListener('click', function(e) { if(e.target===this) closeEdit(); });
+  document.addEventListener('keydown', e => { if(e.key==='Escape') closeEdit(); });
+
+  const ALL_HOLIDAYS = [
+    {% for h in holidays %}
+    {
+      id:   {{ h.id }},
+      date: "{{ h.holiday_date }}",
+      name: {{ h.holiday_name | tojson }},
+      type: "{{ h.holiday_type }}",
+      desc: {{ (h.description or '') | tojson }},
+      day:  "{{ h.holiday_date.strftime('%a') if h.holiday_date else '' }}",
+      fmt:  "{{ h.holiday_date.strftime('%d %b %Y') if h.holiday_date else '—' }}"
+    },
+    {% endfor %}
+  ];
+
+  const PER_PAGE = 12;
+  let currentPage = 1;
+  function totalPages() { return Math.max(1, Math.ceil(ALL_HOLIDAYS.length / PER_PAGE)); }
+
+  function renderTable(page) {
+    currentPage = page;
+    const start = (page-1)*PER_PAGE;
+    const slice = ALL_HOLIDAYS.slice(start, start+PER_PAGE);
+    const tbody = document.getElementById('holidayTableBody');
+    if (!ALL_HOLIDAYS.length) {
+      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><i class="bi bi-calendar-x fs-1 d-block mb-2"></i>No holidays for this year.<br><small>Use the form on the left to add holidays.</small></div></td></tr>`;
+      document.getElementById('paginationBar').innerHTML = '';
+      return;
+    }
+    tbody.innerHTML = slice.map((h,i) => `<tr>
+      <td class="slno-cell">${start+i+1}</td>
+      <td>${h.fmt}</td>
+      <td><span class="day-label">${h.day}</span></td>
+      <td class="name-cell">${h.name}</td>
+      <td class="c"><span class="type-chip t-${h.type}">${h.type}</span></td>
+      <td class="c">
+        <button class="action-btn btn-edit" title="Edit"
+          onclick="openEdit(${h.id},'${h.date}',${JSON.stringify(h.name)},'${h.type}',${JSON.stringify(h.desc)})">
+          <i class="bi bi-pencil"></i>
+        </button>
+      </td>
+      <td class="c">
+        <form method="POST" action="/admin/holidays/${h.id}/delete"
+              onsubmit="return confirm('Delete \'${h.name}\'?');" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="action-btn btn-delete" title="Delete"><i class="bi bi-trash"></i></button>
+        </form>
+      </td>
+    </tr>`).join('');
+    renderPagination();
+  }
+
+  function renderPagination() {
+    const tp = totalPages();
+    const bar = document.getElementById('paginationBar');
+    if (tp<=1) { bar.innerHTML=''; return; }
+    let html = `<button class="page-btn" onclick="renderTable(${currentPage-1})" ${currentPage===1?'disabled':''}>‹</button>`;
+    for (let p=1;p<=tp;p++) {
+      if (p===1||p===tp||Math.abs(p-currentPage)<=1)
+        html += `<button class="page-btn ${p===currentPage?'active':''}" onclick="renderTable(${p})">${p}</button>`;
+      else if (Math.abs(p-currentPage)===2)
+        html += `<span class="page-info">…</span>`;
+    }
+    html += `<button class="page-btn" onclick="renderTable(${currentPage+1})" ${currentPage===tp?'disabled':''}>›</button>`;
+    html += `<span class="page-info">${currentPage} of ${tp}</span>`;
+    bar.innerHTML = html;
+  }
+
+  const HOLIDAY_MAP = {};
+  ALL_HOLIDAYS.forEach(h => HOLIDAY_MAP[h.date] = h.name);
+  const YEAR   = {{ selected_year }};
+  const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const DAYS   = ["S","M","T","W","T","F","S"];
+
+  function buildCalendar() {
+    const c = document.getElementById('miniCalendar');
+    c.innerHTML = '';
+    for (let m=0; m<12; m++) {
+      const t = document.createElement('div');
+      t.className = 'cal-month-title';
+      t.textContent = MONTHS[m] + ' ' + YEAR;
+      c.appendChild(t);
+      const g = document.createElement('div');
+      g.className = 'mini-cal-grid';
+      DAYS.forEach(d => { const h=document.createElement('div'); h.className='cal-day-head'; h.textContent=d; g.appendChild(h); });
+      const fd  = new Date(YEAR,m,1).getDay();
+      const dim = new Date(YEAR,m+1,0).getDate();
+      for (let i=0;i<fd;i++){const e=document.createElement('div');e.className='cal-cell empty';g.appendChild(e);}
+      for (let day=1;day<=dim;day++){
+        const ds   = YEAR+'-'+String(m+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+        const dow  = new Date(YEAR,m,day).getDay();
+        const hn   = HOLIDAY_MAP[ds];
+        const cell = document.createElement('div');
+        const num  = document.createElement('span');
+        num.className='cal-num'; num.textContent=day;
+        if(hn){ cell.className='cal-cell holiday'; cell.title=hn; const nm=document.createElement('span'); nm.className='cal-name'; nm.textContent=hn; cell.appendChild(num); cell.appendChild(nm); }
+        else if(dow===0||dow===6){ cell.className='cal-cell weekend'; cell.appendChild(num); }
+        else{ cell.className='cal-cell normal'; cell.appendChild(num); }
+        g.appendChild(cell);
+      }
+      c.appendChild(g);
+    }
+  }
+
+  renderTable(1);
+  buildCalendar();
+</script>
+</body>
+</html>

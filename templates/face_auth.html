@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Face Verification</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+body {
+    height: 100vh;
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, #1e3a8a, #0f172a);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.glass-card {
+    width: 420px;
+    padding: 32px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 30px 70px rgba(0,0,0,0.3);
+    text-align: center;
+    color: #1e293b;
+}
+
+.scan-wrapper {
+    width: 240px;
+    height: 240px;
+    border-radius: 50%;
+    background: #f8fafc;
+    margin: 22px auto;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 4px solid #cbd5e1;
+}
+
+.scan-wrapper::before {
+    content: "";
+    position: absolute;
+    inset: -12px;
+    border-radius: 50%;
+    border: 3px solid #3b82f6;
+    animation: scanPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes scanPulse {
+    0%   { opacity: 0.35; }
+    50%  { opacity: 1; }
+    100% { opacity: 0.35; }
+}
+
+.success::before {
+    border-color: #22c55e;
+    animation: none;
+    box-shadow: 0 0 25px rgba(34,197,94,0.8);
+}
+
+.error::before {
+    border-color: #ef4444;
+    animation: none;
+    box-shadow: 0 0 25px rgba(239,68,68,0.8);
+}
+
+.warning::before {
+    border-color: #f59e0b;
+    animation: none;
+    box-shadow: 0 0 25px rgba(245,158,11,0.8);
+}
+
+.status-text {
+    margin-top: 14px;
+    font-size: 15px;
+    color: #475569;
+}
+
+.popup-overlay {
+    visibility: hidden;
+    opacity: 0;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(5px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+.popup-overlay.show {
+    visibility: visible;
+    opacity: 1;
+}
+
+.popup-box {
+    background: #fff;
+    border-radius: 20px;
+    padding: 40px 36px 32px;
+    width: 340px;
+    text-align: center;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.3);
+    animation: popIn 0.35s cubic-bezier(0.34,1.56,0.64,1);
+    position: relative;
+}
+
+@keyframes popIn {
+    from { transform: scale(0.6); opacity: 0; }
+    to   { transform: scale(1);   opacity: 1; }
+}
+
+.popup-icon {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem;
+    margin: 0 auto 16px;
+}
+.popup-icon.success { background: #dcfce7; }
+.popup-icon.danger  { background: #fee2e2; }
+.popup-icon.warning { background: #fef3c7; }
+.popup-icon.info    { background: #e0f2fe; }
+
+.popup-box h3 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 8px;
+}
+
+.popup-box p {
+    font-size: 0.875rem;
+    color: #64748b;
+    line-height: 1.6;
+    margin-bottom: 0;
+}
+
+.scanning-dots::after {
+    content: '';
+    animation: dots 1.5s steps(4, end) infinite;
+}
+@keyframes dots {
+    0%   { content: ''; }
+    25%  { content: '.'; }
+    50%  { content: '..'; }
+    75%  { content: '...'; }
+    100% { content: ''; }
+}
+    </style>
+</head>
+
+<body>
+
+<div class="glass-card">
+    <h4 class="mb-1">Face Verification</h4>
+    <p class="opacity-75 mb-3">Please align your face inside the circle</p>
+
+    <div class="scan-wrapper" id="scanRing">
+        <video id="video" autoplay muted playsinline></video>
+    </div>
+
+    <div id="statusText" class="status-text">
+        <span class="scanning-dots">Scanning</span>
+    </div>
+
+    <audio id="successSound" src="{{ url_for('static', filename='sounds/success.mp3') }}"></audio>
+    <audio id="errorSound"   src="{{ url_for('static', filename='sounds/error.mp3') }}"></audio>
+</div>
+
+<!-- ── POPUP: Success ── -->
+<div class="popup-overlay" id="popSuccess">
+    <div class="popup-box">
+        <div class="popup-icon success">✅</div>
+        <h3>Face Recognized!</h3>
+        <p id="successMsg">Your attendance has been marked successfully.</p>
+    </div>
+</div>
+
+<!-- ── POPUP: Auto Check-In (checkout + checkin in one scan) ── -->
+<div class="popup-overlay" id="popAutoCheckin">
+    <div class="popup-box">
+        <div class="popup-icon success">✅</div>
+        <h3>All Done!</h3>
+        <p id="autoCheckinMsg">Previous day closed and today's check-in marked.</p>
+    </div>
+</div>
+
+<!-- ── POPUP: Invalid User ── -->
+<div class="popup-overlay" id="popFail">
+    <div class="popup-box">
+        <div class="popup-icon danger">❌</div>
+        <h3>Invalid User</h3>
+        <p>Face not recognized. Redirecting to login...</p>
+    </div>
+</div>
+
+<!-- ── POPUP: Already Done ── -->
+<div class="popup-overlay" id="popAlready">
+    <div class="popup-box">
+        <div class="popup-icon warning">⚠️</div>
+        <h3 id="alreadyTitle">Already Marked</h3>
+        <p id="alreadyMsg">Attendance already completed for today.</p>
+    </div>
+</div>
+
+<!-- ── POPUP: Holiday / Weekend ── -->
+<div class="popup-overlay" id="popHoliday">
+    <div class="popup-box">
+        <div class="popup-icon info">🎉</div>
+        <h3 id="holidayTitle">Day Off!</h3>
+        <p id="holidayMsg">No attendance required today.</p>
+    </div>
+</div>
+
+<!-- ── POPUP: Error ── -->
+<div class="popup-overlay" id="popError">
+    <div class="popup-box">
+        <div class="popup-icon danger">🚫</div>
+        <h3>Error</h3>
+        <p id="errorMsg">Something went wrong. Please try again.</p>
+    </div>
+</div>
+
+<!-- ── POPUP: Pending Checkout ── -->
+<div class="popup-overlay" id="popPending">
+    <div class="popup-box">
+        <div class="popup-icon warning">⏳</div>
+        <h3>Checkout Pending</h3>
+        <p id="pendingMsg">You have an incomplete checkout from a previous day. Redirecting to checkout...</p>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+const video        = document.getElementById("video");
+const statusText   = document.getElementById("statusText");
+const scanRing     = document.getElementById("scanRing");
+const successSound = document.getElementById("successSound");
+const errorSound   = document.getElementById("errorSound");
+
+let stream       = null;
+let startTime    = Date.now();
+let isProcessing = false;
+let finished     = false;
+
+const MAX_TIME      = 60 * 1000;
+const SCAN_INTERVAL = 3000;
+const endpoint = "{{ '/check_in' if action == 'checkin' else '/checkout' }}";
+
+/* ── Show popup then redirect ── */
+function showPopup(id, delay, redirectUrl) {
+    const overlay = document.getElementById(id);
+    overlay.classList.add("show");
+    setTimeout(() => {
+        if (redirectUrl) window.location.href = redirectUrl;
+    }, 1200);
+}
+
+/* ── Camera ── */
+navigator.mediaDevices.getUserMedia({ video: true })
+    .then(s => {
+        stream = s;
+        video.srcObject = s;
+        setTimeout(startScanning, 1500);
+    })
+    .catch(() => {
+        statusText.innerText = "Camera access denied.";
+    });
+
+function captureImage() {
+    const canvas = document.createElement("canvas");
+    canvas.width  = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d").drawImage(video, 0, 0);
+    return canvas.toDataURL("image/jpeg");
+}
+
+function stopCamera() {
+    if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+        stream = null;
+    }
+}
+
+/* ── Main scanning loop ── */
+function startScanning() {
+    const scanTimer = setInterval(async () => {
+
+        if (finished || isProcessing) return;
+        isProcessing = true;
+
+        // Timeout check
+        if (Date.now() - startTime > MAX_TIME) {
+            finished = true;
+            clearInterval(scanTimer);
+            stopCamera();
+            scanRing.classList.add("error");
+            statusText.innerText = "Time expired.";
+            errorSound.play();
+            document.getElementById("errorMsg").innerText = "Time expired. Please try again.";
+            showPopup("popError", 2500, "/face-auth/{{ action }}");
+            isProcessing = false;
+            return;
+        }
+
+        try {
+            const image = captureImage();
+            const response = await fetch(endpoint, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ image })
+            });
+
+            const data = await response.json();
+
+            // ── Terminal states — stop scanning once any of these hit ──
+            if (["success", "auto_checkin", "holiday", "already_checked_in",
+                 "already_done", "unauthorized", "pending_checkout"].includes(data.status)) {
+                finished = true;
+                clearInterval(scanTimer);
+                stopCamera();
+            }
+
+            // ── SUCCESS ──
+            if (data.status === "success") {
+                scanRing.classList.add("success");
+                statusText.innerText = data.message || "Verified!";
+                successSound.play();
+                document.getElementById("successMsg").innerText = data.message || "Attendance marked successfully.";
+                showPopup("popSuccess", 2000, "/user/dashboard");
+
+            // ── AUTO CHECKIN (pending closed + today checked in — one scan) ──
+            } else if (data.status === "auto_checkin") {
+                scanRing.classList.add("success");
+                statusText.innerText = data.message || "All done!";
+                successSound.play();
+                document.getElementById("autoCheckinMsg").innerText = data.message || "Previous day closed and today checked in.";
+                showPopup("popAutoCheckin", 2000, "/user/dashboard");
+
+            // ── UNAUTHORIZED ──
+            } else if (data.status === "unauthorized") {
+                scanRing.classList.add("error");
+                statusText.innerText = "Face not recognized.";
+                errorSound.play();
+                showPopup("popFail", 2500, data.redirect || "/login");
+
+            // ── ALREADY CHECKED IN ──
+            } else if (data.status === "already_checked_in") {
+                scanRing.classList.add("warning");
+                statusText.innerText = data.message;
+                errorSound.play();
+                document.getElementById("alreadyTitle").innerText = "Already Checked In";
+                document.getElementById("alreadyMsg").innerText = data.message;
+                showPopup("popAlready", 2500, "/user/dashboard");
+
+            // ── ALREADY COMPLETED ──
+            } else if (data.status === "already_done") {
+                scanRing.classList.add("warning");
+                statusText.innerText = data.message;
+                errorSound.play();
+                document.getElementById("alreadyTitle").innerText = "Already Completed";
+                document.getElementById("alreadyMsg").innerText = data.message;
+                showPopup("popAlready", 2500, "/user/dashboard");
+
+            // ── HOLIDAY / WEEKEND ──
+            } else if (data.status === "holiday") {
+                const msg = data.message || "No attendance required today.";
+                const isWeekend = msg.toLowerCase().includes("weekend");
+                scanRing.classList.add("warning");
+                statusText.innerText = msg;
+                document.getElementById("holidayTitle").innerText = isWeekend ? "It's the Weekend! 🏖️" : "Public Holiday 🎉";
+                document.getElementById("holidayMsg").innerText = msg;
+                showPopup("popHoliday", 3000, "/user/dashboard");
+
+            // ── PENDING CHECKOUT (normal working day — must manually checkout) ──
+            } else if (data.status === "pending_checkout") {
+                const msg = data.message || "Please check out for a previous day first.";
+                scanRing.classList.add("warning");
+                statusText.innerText = msg;
+                errorSound.play();
+                document.getElementById("pendingMsg").innerText = msg;
+
+                if (endpoint.includes("check_in")) {
+                    // Tried to check in but has a pending normal-day checkout
+                    // → redirect to checkout page to resolve it
+                    showPopup("popPending", 3000, "/face-auth/checkout");
+                } else {
+                    // Already on checkout page — backend will handle it, keep scanning
+                    finished = false;
+                }
+
+            // ── TRANSIENT ERROR — keep scanning ──
+            } else if (data.status === "error") {
+                statusText.innerText = "Retrying...";
+            }
+
+        } catch (err) {
+            statusText.innerText = "Scanning...";
+        }
+
+        isProcessing = false;
+
+    }, SCAN_INTERVAL);
+}
+</script>
+
+</body>
+</html>

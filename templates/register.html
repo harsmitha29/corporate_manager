@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sign Up</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/register.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        .signup h2 {
+            margin-bottom: 20px;
+        }
+
+        .signup input,
+        .signup select {
+            height: 42px;
+            padding: 10px 14px;
+            font-size: 14px;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+            margin-bottom: 14px;
+            width: 100%;
+        }
+
+        .signup button {
+            height: 44px;
+            border-radius: 10px;
+            font-size: 15px;
+            width: 100%;
+            background-color: #4CAF50;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+
+        .signup button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="page-wrapper">
+    <div class="signup card">
+        <h2>Sign Up</h2>
+
+        <form method="POST" onsubmit="return validatePasswordOnSubmit()">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="text" name="first_name" placeholder="First Name" required>
+            <input type="text" name="last_name" placeholder="Last Name" required>
+            <input type="email" name="email" placeholder="Email" required>
+
+            <input type="password" name="password" id="password" placeholder="Password" required>
+            <input type="password" id="confirm_password" placeholder="Confirm Password" required>
+
+            <select name="role" required>
+                <option value="" disabled selected>Select Role</option>
+                <option value="employee">Employee</option>
+                <option value="admin">Admin</option>
+            </select>
+
+            <button type="submit">Register</button>
+        </form>
+
+        <p class="login-link">
+            Already have an account?
+            <a href="{{ url_for('auth.login') }}">Login</a>
+        </p>
+    </div>
+</div>
+
+<!-- ================= PASSWORD VALIDATION ================= -->
+<script>
+function validatePasswordOnSubmit() {
+    const password = document.getElementById("password").value;
+    const confirm = document.getElementById("confirm_password").value;
+
+    let errors = [];
+
+    if (password.length < 8) {
+        errors.push("• Minimum 8 characters required");
+    }
+
+    if (!/[A-Z]/.test(password)) {
+        errors.push("• Capital letter missing (A–Z)");
+    }
+
+    if (!/[a-z]/.test(password)) {
+        errors.push("• Small letter missing (a–z)");
+    }
+
+    if (!/[0-9]/.test(password)) {
+        errors.push("• Number missing (0–9)");
+    }
+
+    if (!/[@$!%*?&]/.test(password)) {
+        errors.push("• Special character missing (@ $ ! % * ? &)");
+    }
+
+    if (password !== confirm) {
+        errors.push("• Password and Confirm Password do not match");
+    }
+
+    if (errors.length > 0) {
+        Swal.fire({
+            icon: "error",
+            title: "Invalid Password",
+            html: `<div style="text-align:left;">${errors.join("<br>")}</div>`,
+            width: 420,
+            confirmButtonColor: "#4CAF50"
+        });
+        return false;
+    }
+
+    return true;
+}
+</script>
+
+<!-- ================= FLASHED MESSAGES ================= -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                {% if category == 'success' %}
+                    window.location.href = "{{ url_for('auth.login') }}";
+                {% elif category == 'danger' %}
+                    Swal.fire({
+                        icon: "error",
+                        title: "Registration Failed",
+                        text: "{{ message }}",
+                        confirmButtonColor: "#d33"
+                    });
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+});
+</script>
+
+</body>
+</html>
