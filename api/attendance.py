@@ -450,7 +450,7 @@ def checkout():
 @attendance_bp.route("/face-auth/<action>")
 @login_required
 def face_auth(action):
-    if action not in ("checkin", "checkout"):
+    if action not in ("checkin", "checkout", "wfh"):
         return redirect(url_for("attendance.user_dashboard"))
     return render_template("face_auth.html", action=action)
 
@@ -465,6 +465,14 @@ def mark_wfh():
 
     if is_non_working_day(today):
         return api_err("Today is a non-working day", 400)
+
+    # Face verification (same as office check-in)
+    data = request.get_json() or {}
+    img  = data.get("image")
+    if img:
+        ok, err_response = _verify_face(img, user_id)
+        if not ok:
+            return err_response
 
     conn = get_db()
     cur  = conn.cursor(dictionary=True)
