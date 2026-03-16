@@ -165,19 +165,53 @@ def api_pending_counts():
 @reports_bp.route("/api/export/attendance")
 @login_required
 def export_attendance():
+    from datetime import date as _date
+    from dateutil.relativedelta import relativedelta
+
     today      = today_local()
-    year       = request.args.get("year",    today.year,  type=int)
-    month      = request.args.get("month",   today.month, type=int)
-    target_uid = request.args.get("user_id", type=int)
     is_admin   = session.get("role") == "admin"
+
+    # Task 7.6: accept start_date/end_date OR year/month fallback
+    start_str = request.args.get("start_date", "")
+    end_str   = request.args.get("end_date",   "")
+
+    if start_str and end_str:
+        try:
+            from datetime import datetime as _dt2
+            start_date = _dt2.strptime(start_str, "%Y-%m-%d").date()
+            end_date   = _dt2.strptime(end_str,   "%Y-%m-%d").date()
+        except ValueError:
+            return api_err("Invalid date format. Use YYYY-MM-DD.", 400)
+
+        if end_date < start_date:
+            return api_err("End date must be after start date.", 400)
+
+        # Task 7.6: 3-month maximum cap
+        if end_date > start_date + relativedelta(months=3):
+            return api_err(
+                "Date range exceeds the 3-month maximum. "
+                "Please select a range of 3 months or less.", 400
+            )
+        date_filter = "a.attendance_date BETWEEN %s AND %s"
+        date_params = [start_date, end_date]
+        filename_suffix = f"{start_date}_{end_date}"
+    else:
+        # Legacy year/month mode — still limited to 1 month (< 3 months, always safe)
+        year  = request.args.get("year",  today.year,  type=int)
+        month = request.args.get("month", today.month, type=int)
+        date_filter = "YEAR(a.attendance_date)=%s AND MONTH(a.attendance_date)=%s"
+        date_params = [year, month]
+        filename_suffix = f"{year}_{month:02d}"
+
+    target_uid = request.args.get("user_id", type=int)
 
     conn = get_db()
     cur  = conn.cursor(dictionary=True)
     try:
         if is_admin:
-            uid_filter = "AND a.user_id=%s " if target_uid else ""
-            params     = [year, month] + ([target_uid] if target_uid else [])
-            cur.execute(f"""
+            uid_clause = "AND a.user_id=%s" if target_uid else ""
+            params     = date_params + ([target_uid] if target_uid else [])
+            cur.execute("""
                 SELECT u.employee_id, u.first_name, u.last_name, d.dept_name,
                        a.attendance_date, a.check_in, a.check_out, a.status,
                        a.work_type, a.overtime_hours,
@@ -191,12 +225,12 @@ def export_attendance():
                 FROM tbl_attendance a
                 JOIN tbl_users u ON u.user_id=a.user_id
                 LEFT JOIN tbl_departments d ON d.id=u.dept_id
-                WHERE YEAR(a.attendance_date)=%s AND MONTH(a.attendance_date)=%s
+                WHERE """ + date_filter + """
                   AND LOWER(u.role_type)='employee'
-                  {uid_filter}
+                  """ + uid_clause + """
                 ORDER BY u.first_name, a.attendance_date
             """, params)
-            filename = f"attendance_{year}_{month:02d}.csv"
+            filename = f"attendance_{filename_suffix}.csv"
         else:
             uid = session["user_id"]
             cur.execute("""
@@ -210,11 +244,10 @@ def export_attendance():
                               ) / 60.0 ELSE 0 END, 2
                        ) AS hours_worked
                 FROM tbl_attendance a
-                WHERE a.user_id=%s
-                  AND YEAR(a.attendance_date)=%s AND MONTH(a.attendance_date)=%s
+                WHERE a.user_id=%s AND """ + date_filter + """
                 ORDER BY a.attendance_date
-            """, (uid, year, month))
-            filename = f"my_attendance_{year}_{month:02d}.csv"
+            """, [uid] + date_params)
+            filename = f"my_attendance_{filename_suffix}.csv"
 
         rows = cur.fetchall()
     finally:

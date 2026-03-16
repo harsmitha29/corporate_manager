@@ -5,6 +5,7 @@ Attendance correction request routes:
   GET      /admin/regularizations
   POST     /admin/regularizations/<id>/action
 """
+from math import ceil
 from datetime import datetime as _dt
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
@@ -98,9 +99,26 @@ def regularization():
 @regularization_bp.route("/admin/regularizations")
 @admin_required
 def admin_regularizations():
+    """Task 5.3: paginated list (20/page) with status tabs showing counts."""
     status_filter = request.args.get("status", "Pending")
+    page          = max(1, int(request.args.get("page", 1)))
+    per_page      = 20
+    offset        = (page - 1) * per_page
+
     conn = get_db()
     cur  = conn.cursor(dictionary=True)
+
+    # counts for tab badges
+    cur.execute("SELECT status, COUNT(*) AS cnt FROM tbl_regularizations GROUP BY status")
+    counts = {r["status"]: r["cnt"] for r in cur.fetchall()}
+
+    cur.execute(
+        "SELECT COUNT(*) AS total FROM tbl_regularizations WHERE status=%s",
+        (status_filter,)
+    )
+    total       = (cur.fetchone() or {}).get("total", 0)
+    total_pages = max(1, ceil(total / per_page))
+
     cur.execute("""
         SELECT r.*, u.first_name, u.last_name, u.email,
                a.check_in AS current_in, a.check_out AS current_out, a.status AS att_status
@@ -109,13 +127,17 @@ def admin_regularizations():
         LEFT JOIN tbl_attendance a ON a.user_id=r.user_id AND a.attendance_date=r.reg_date
         WHERE r.status=%s
         ORDER BY r.applied_at DESC
-    """, (status_filter,))
+        LIMIT %s OFFSET %s
+    """, (status_filter, per_page, offset))
     reqs = cur.fetchall()
     cur.close(); conn.close()
+
     return render_template(
         "admin_regularizations.html",
         requests=reqs, status_filter=status_filter,
         statuses=["Pending", "Approved", "Rejected"],
+        counts=counts,
+        page=page, per_page=per_page, total_pages=total_pages,
     )
 
 

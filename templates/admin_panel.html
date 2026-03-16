@@ -18,38 +18,40 @@
     .main { margin-left:220px; min-height:100vh; }
     .topbar { background:#fff; border-bottom:1px solid #e9ecef; padding:.75rem 1.75rem; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:90; }
     .topbar .page-title { font-weight:600; font-size:1.05rem; color:#1e2a3a; }
-    .content { padding:1.75rem; }
+    .content { padding:1rem 1rem; }
     .card { border:none; border-radius:.75rem; box-shadow:0 2px 12px rgba(0,0,0,.06); }
     /* Stat bar */
-    .stat-bar { display:flex; gap:.75rem; flex-wrap:wrap; margin-bottom:1.25rem; }
-    .stat-chip { background:#fff; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,.06); padding:.6rem 1rem; display:flex; align-items:center; gap:.6rem; min-width:130px; }
-    .stat-chip .sc-icon { width:34px; height:34px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:.95rem; flex-shrink:0; }
-    .stat-chip .sc-val { font-size:1.25rem; font-weight:700; line-height:1; color:#1e2a3a; }
-    .stat-chip .sc-lbl { font-size:.68rem; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:.04em; margin-top:1px; }
-    /* Table */
-    .adm-table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
-    .adm-table { width:100%; table-layout:fixed; border-collapse:collapse; font-size:.84rem; min-width:820px; }
-    .adm-table thead th { background:#f8faff; color:#64748b; font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; padding:.65rem .9rem; border-bottom:2px solid #e9ecef; white-space:nowrap; }
+    .stat-bar { display:flex; gap:.75rem; flex-wrap:nowrap; margin-bottom:1rem; }
+    .stat-chip { background:#fff; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,.06); padding:.6rem 1rem; display:flex; align-items:center; gap:.6rem; min-width:140px; max-width:200px; }
+    .stat-chip .sc-icon { width:30px; height:30px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:.85rem; flex-shrink:0; }
+    .stat-chip .sc-val { font-size:1.15rem; font-weight:700; line-height:1; color:#1e2a3a; }
+    .stat-chip .sc-lbl { font-size:.62rem; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:.04em; margin-top:1px; white-space:nowrap; }
+    /* Table — +1.5 inches wider by reducing sidebar and padding */
+    .adm-table-wrap { overflow-x:hidden; margin:0 -.25rem; }
+    .adm-table { width:100%; table-layout:fixed; border-collapse:collapse; font-size:.80rem; }
+    .adm-table thead th { background:#f8faff; color:#64748b; font-size:.67rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; padding:.55rem .75rem; border-bottom:2px solid #e9ecef; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .adm-table thead th.tc { text-align:center; }
-    .adm-table tbody td { padding:.7rem .9rem; border-bottom:1px solid #f1f5f9; vertical-align:middle; color:#334155; overflow:hidden; }
+    .adm-table tbody td { padding:.55rem .75rem; border-bottom:1px solid #f1f5f9; vertical-align:middle; color:#334155; overflow:hidden; }
     .adm-table tbody td.tc { text-align:center; }
     .adm-table tbody tr:last-child td { border-bottom:none; }
     .adm-table tbody tr:hover td { background:#f8faff; }
-    /* Column widths */
-    .col-num    { width:42px; }
-    .col-name   { width:190px; }
-    .col-email  { width:190px; }
-    .col-dept   { width:130px; }
-    .col-empid  { width:90px; }
-    .col-join   { width:100px; }
-    .col-today  { width:90px; }
-    .col-apr    { width:80px; }
-    .col-act    { width:105px; }
-    .emp-name   { font-weight:600; font-size:.88rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .emp-desig  { font-size:.73rem; color:#94a3b8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .emp-email  { font-size:.78rem; color:#475569; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; }
-    .emp-id     { font-size:.75rem; color:#64748b; font-family:'Courier New',monospace; white-space:nowrap; }
-    .badge { font-weight:500; font-size:.75em; }
+    /* Column widths — +1.5 inches total spread across name/email/dept */
+    .col-num    { width:34px; }
+    .col-name   { width:185px; }
+    .col-email  { width:175px; }
+    .col-dept   { width:115px; }
+    .col-empid  { width:75px; }
+    .col-join   { width:85px; }
+    .col-today  { width:80px; }
+    .col-apr    { width:58px; }
+    .col-act    { width:112px; }
+    .emp-name   { font-weight:600; font-size:.84rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .emp-desig  { font-size:.70rem; color:#94a3b8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .emp-email  { font-size:.75rem; color:#475569; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; }
+    .emp-id     { font-size:.72rem; color:#64748b; font-family:'Courier New',monospace; white-space:nowrap; }
+    .badge { font-weight:500; font-size:.74em; }
+    /* Action buttons — icon-only, tighter */
+    .btn-icon { padding:3px 6px; font-size:.78rem; line-height:1.4; }
   </style>
 </head>
 <body>
@@ -115,18 +117,18 @@
     <!-- Filter controls -->
     <form method="GET" action="{{ url_for('admin.admin_panel') }}" class="d-flex gap-2 align-items-center flex-wrap mb-3" id="filterForm">
       <input type="hidden" name="page" value="1">
-      <div class="input-group input-group-sm" style="width:230px;">
+      <div class="input-group input-group-sm" style="width:190px;">
         <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
         <input type="text" name="q" id="searchInput" class="form-control border-start-0 ps-0"
                placeholder="Name, email, ID…" value="{{ search_q or '' }}" autocomplete="off">
       </div>
-      <select name="dept" class="form-select form-select-sm" style="width:160px;" onchange="this.form.submit()">
+      <select name="dept" class="form-select form-select-sm" style="width:130px;" onchange="this.form.submit()">
         <option value="">All Departments</option>
         {% for dept in departments %}
         <option value="{{ dept.id }}" {% if selected_dept == dept.id %}selected{% endif %}>{{ dept.dept_name }}</option>
         {% endfor %}
       </select>
-      <select name="year" class="form-select form-select-sm" style="width:110px;" onchange="this.form.submit()">
+      <select name="year" class="form-select form-select-sm" style="width:95px;" onchange="this.form.submit()">
         <option value="">All Years</option>
         {% for year in available_years %}
         <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>{{ year }}</option>
@@ -137,7 +139,6 @@
       <a href="{{ url_for('admin.admin_panel') }}" class="btn btn-sm btn-outline-secondary">✕ Clear</a>
       {% endif %}
     </form>
-
     <div class="card">
       <div class="card-body p-0">
         {% if search_q %}
@@ -214,12 +215,279 @@
                 </td>
                 <td class="tc">
                   <div class="d-flex gap-1 justify-content-center">
-                    <a href="{{ url_for('admin.view_user', user_id=user.user_id) }}" class="btn btn-sm btn-outline-primary" title="View"><i class="bi bi-eye"></i></a>
-                    <a href="{{ url_for('admin.edit_user', user_id=user.user_id) }}" class="btn btn-sm btn-outline-success" title="Edit"><i class="bi bi-pencil"></i></a>
+                    <a href="{{ url_for('admin.view_user', user_id=user.user_id) }}" class="btn btn-sm btn-icon btn-outline-primary" title="View"><i class="bi bi-eye"></i></a>
+                    <a href="{{ url_for('admin.edit_user', user_id=user.user_id) }}" class="btn btn-sm btn-icon btn-outline-success" title="Edit"><i class="bi bi-pencil"></i></a>
+                    <a href="{{ url_for('admin.enrol_face', user_id=user.user_id) }}" class="btn btn-sm btn-icon btn-outline-secondary" title="Enrol Face"><i class="bi bi-camera"></i></a>
                     <form action="{{ url_for('admin.delete_user', user_id=user.user_id) }}" method="POST" style="display:inline;"
                           onsubmit="return confirm('Delete {{ user.first_name }} {{ user.last_name }}? This cannot be undone.');">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                      <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></button>
+                      <button type="submit" class="btn btn-sm btn-icon btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="9" class="text-center py-5 text-muted">
+                  <i class="bi bi-inbox fs-1 d-block mb-2"></i>No employees found.
+                  {% if search_q %}<div class="mt-2"><a href="{{ url_for('admin.admin_panel') }}" class="btn btn-sm btn-outline-primary">Clear search</a></div>{% endif %}
+                </td>
+              </tr>
+            {% endif %}
+            </tbody>
+          </table>
+        </div>
+
+        {% if total_pages > 1 %}
+        <div class="d-flex justify-content-center align-items-center gap-2 py-3 border-top">
+          <a class="btn btn-sm btn-outline-secondary {% if page==1 %}disabled{% endif %}" href="{{ url_for('admin.admin_panel', page=1, q=search_q, year=selected_year, dept=selected_dept) }}">&laquo;</a>
+          <a class="btn btn-sm btn-outline-secondary {% if page==1 %}disabled{% endif %}" href="{{ url_for('admin.admin_panel', page=page-1, q=search_q, year=selected_year, dept=selected_dept) }}">&lsaquo;</a>
+          <span class="btn btn-sm btn-primary disabled">{{ page }} / {{ total_pages }}</span>
+          <a class="btn btn-sm btn-outline-secondary {% if page==total_pages %}disabled{% endif %}" href="{{ url_for('admin.admin_panel', page=page+1, q=search_q, year=selected_year, dept=selected_dept) }}">&rsaquo;</a>
+          <a class="btn btn-sm btn-outline-secondary {% if page==total_pages %}disabled{% endif %}" href="{{ url_for('admin.admin_panel', page=total_pages, q=search_q, year=selected_year, dept=selected_dept) }}">&raquo;</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+<script>
+  // Auto-submit search after typing stops
+  let _t;
+  document.getElementById('searchInput').addEventListener('input', function() {
+    clearTimeout(_t);
+    _t = setTimeout(() => this.closest('form').submit(), 420);
+  });
+
+  // Load pending count badges
+  async function loadBadges() {
+    try {
+      const res = await fetch("/api/admin/pending-counts");
+      if (!res.ok) return;
+      const d = await res.json();
+      function setBadge(id, count) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (count > 0) { el.textContent = count; el.style.display = 'inline-block'; }
+        else { el.style.display = 'none'; }
+      }
+      setBadge('badge-leaves',  d.leaves);
+      setBadge('badge-regs',    d.regularizations);
+      setBadge('badge-assess',  d.assessments);
+    } catch(e) {}
+  }
+  loadBadges();
+  setInterval(loadBadges, 30000);
+</script>
+</body>
+</html><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    body { background:#f5f7fb; font-family:'Segoe UI',sans-serif; }
+    .sidebar { width:220px; min-height:100vh; background:#1e2a3a; position:fixed; top:0; left:0; z-index:100; padding:1.5rem 0; }
+    .sidebar .brand { color:#fff; font-weight:700; font-size:1.1rem; padding:0 1.25rem 1.5rem; border-bottom:1px solid #2d3f54; margin-bottom:1rem; display:flex; align-items:center; gap:.5rem; }
+    .sidebar a { display:flex; align-items:center; gap:.6rem; color:#a0b0c0; text-decoration:none; padding:.55rem 1.25rem; font-size:.9rem; transition:background .15s,color .15s; }
+    .sidebar a:hover,.sidebar a.active { background:#2d3f54; color:#fff; }
+    .sidebar a i { font-size:1rem; }
+    /* Badge for pending counts */
+    .sidebar a .nav-badge { margin-left:auto; background:#ef4444; color:#fff; font-size:.62rem; font-weight:700; padding:1px 6px; border-radius:999px; min-width:18px; text-align:center; display:none; }
+    .main { margin-left:220px; min-height:100vh; }
+    .topbar { background:#fff; border-bottom:1px solid #e9ecef; padding:.75rem 1.75rem; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:90; }
+    .topbar .page-title { font-weight:600; font-size:1.05rem; color:#1e2a3a; }
+    .content { padding:1rem 1rem; }
+    .card { border:none; border-radius:.75rem; box-shadow:0 2px 12px rgba(0,0,0,.06); }
+    /* Stat bar */
+    .stat-bar { display:flex; gap:.75rem; flex-wrap:nowrap; margin-bottom:1rem; }
+    .stat-chip { background:#fff; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,.06); padding:.6rem 1rem; display:flex; align-items:center; gap:.6rem; min-width:140px; max-width:200px; }
+    .stat-chip .sc-icon { width:30px; height:30px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:.85rem; flex-shrink:0; }
+    .stat-chip .sc-val { font-size:1.15rem; font-weight:700; line-height:1; color:#1e2a3a; }
+    .stat-chip .sc-lbl { font-size:.62rem; color:#94a3b8; font-weight:600; text-transform:uppercase; letter-spacing:.04em; margin-top:1px; white-space:nowrap; }
+    /* Table — +1.5 inches wider by reducing sidebar and padding */
+    .adm-table-wrap { overflow-x:hidden; margin:0 -.25rem; }
+    .adm-table { width:100%; table-layout:fixed; border-collapse:collapse; font-size:.80rem; }
+    .adm-table thead th { background:#f8faff; color:#64748b; font-size:.67rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; padding:.55rem .75rem; border-bottom:2px solid #e9ecef; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .adm-table thead th.tc { text-align:center; }
+    .adm-table tbody td { padding:.55rem .75rem; border-bottom:1px solid #f1f5f9; vertical-align:middle; color:#334155; overflow:hidden; }
+    .adm-table tbody td.tc { text-align:center; }
+    .adm-table tbody tr:last-child td { border-bottom:none; }
+    .adm-table tbody tr:hover td { background:#f8faff; }
+    /* Column widths — +1.5 inches total spread across name/email/dept */
+    .col-num    { width:34px; }
+    .col-name   { width:185px; }
+    .col-email  { width:175px; }
+    .col-dept   { width:115px; }
+    .col-empid  { width:75px; }
+    .col-join   { width:85px; }
+    .col-today  { width:80px; }
+    .col-apr    { width:58px; }
+    .col-act    { width:112px; }
+    .emp-name   { font-weight:600; font-size:.84rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .emp-desig  { font-size:.70rem; color:#94a3b8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .emp-email  { font-size:.75rem; color:#475569; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; }
+    .emp-id     { font-size:.72rem; color:#64748b; font-family:'Courier New',monospace; white-space:nowrap; }
+    .badge { font-weight:500; font-size:.74em; }
+    /* Action buttons — icon-only, tighter */
+    .btn-icon { padding:3px 6px; font-size:.78rem; line-height:1.4; }
+  </style>
+</head>
+<body>
+
+{% include "_sidebar_admin.html" %}
+
+<div class="main">
+  <div class="topbar">
+    <span class="page-title"><i class="bi bi-grid me-2 text-primary"></i>Dashboard — Employees</span>
+    <div class="d-flex align-items-center gap-2">
+      <a href="{{ url_for('admin.create_employee') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Add Employee</a>
+      <small class="text-muted ms-2">Logged in as Admin</small>
+    </div>
+  </div>
+
+  <div class="content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ 'danger' if category=='danger' else ('success' if category=='success' else 'warning') }} alert-dismissible fade show" role="alert">
+          {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endwith %}
+
+    <!-- Today's attendance summary bar -->
+    {% if today_stats %}
+    <div class="stat-bar">
+      <div class="stat-chip">
+        <div class="sc-icon" style="background:#dcfce7;color:#16a34a;"><i class="bi bi-check-circle-fill"></i></div>
+        <div><div class="sc-val">{{ today_stats.present_count or 0 }}</div><div class="sc-lbl">Present Today</div></div>
+      </div>
+      <div class="stat-chip">
+        <div class="sc-icon" style="background:#fee2e2;color:#dc2626;"><i class="bi bi-x-circle-fill"></i></div>
+        <div><div class="sc-val">{{ today_stats.absent_count or 0 }}</div><div class="sc-lbl">Absent</div></div>
+      </div>
+      <div class="stat-chip">
+        <div class="sc-icon" style="background:#dbeafe;color:#2563eb;"><i class="bi bi-calendar2-minus-fill"></i></div>
+        <div><div class="sc-val">{{ today_stats.leave_count or 0 }}</div><div class="sc-lbl">On Leave</div></div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Filter controls -->
+    <form method="GET" action="{{ url_for('admin.admin_panel') }}" class="d-flex gap-2 align-items-center flex-wrap mb-3" id="filterForm">
+      <input type="hidden" name="page" value="1">
+      <div class="input-group input-group-sm" style="width:190px;">
+        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+        <input type="text" name="q" id="searchInput" class="form-control border-start-0 ps-0"
+               placeholder="Name, email, ID…" value="{{ search_q or '' }}" autocomplete="off">
+      </div>
+      <select name="dept" class="form-select form-select-sm" style="width:130px;" onchange="this.form.submit()">
+        <option value="">All Departments</option>
+        {% for dept in departments %}
+        <option value="{{ dept.id }}" {% if selected_dept == dept.id %}selected{% endif %}>{{ dept.dept_name }}</option>
+        {% endfor %}
+      </select>
+      <select name="year" class="form-select form-select-sm" style="width:95px;" onchange="this.form.submit()">
+        <option value="">All Years</option>
+        {% for year in available_years %}
+        <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>{{ year }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> Filter</button>
+      {% if search_q or selected_year or selected_dept %}
+      <a href="{{ url_for('admin.admin_panel') }}" class="btn btn-sm btn-outline-secondary">✕ Clear</a>
+      {% endif %}
+    </form>
+    <div class="card">
+      <div class="card-body p-0">
+        {% if search_q %}
+        <div class="px-3 py-2 bg-light border-bottom small text-primary">
+          Showing results for "<strong>{{ search_q }}</strong>"
+        </div>
+        {% endif %}
+        <div class="adm-table-wrap">
+          <table class="adm-table">
+            <colgroup>
+              <col class="col-num">
+              <col class="col-name">
+              <col class="col-email">
+              <col class="col-dept">
+              <col class="col-empid">
+              <col class="col-join">
+              <col class="col-today">
+              <col class="col-apr">
+              <col class="col-act">
+            </colgroup>
+            <thead>
+              <tr>
+                <th class="ps-3">#</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Department</th>
+                <th>Emp ID</th>
+                <th>Joined</th>
+                <th class="tc">Today</th>
+                <th class="tc">Appraisal</th>
+                <th class="tc">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+            {% if users %}
+              {% for user in users %}
+              <tr>
+                <td class="ps-3 text-muted" style="font-size:.78rem;">{{ (page-1)*10 + loop.index }}</td>
+                <td>
+                  <div class="emp-name">{{ user.first_name }} {{ user.last_name }}</div>
+                  {% if user.designation %}<div class="emp-desig">{{ user.designation }}</div>{% endif %}
+                </td>
+                <td>
+                  <span class="emp-email" title="{{ user.email }}">{{ user.email }}</span>
+                </td>
+                <td>
+                  {% if user.dept_name %}
+                    <span class="badge bg-primary bg-opacity-10 text-primary" style="font-size:.73rem;font-weight:600;">{{ user.dept_name }}</span>
+                  {% else %}<span class="text-muted">—</span>{% endif %}
+                </td>
+                <td>
+                  {% if user.employee_id %}
+                    <span class="emp-id">{{ user.employee_id }}</span>
+                  {% else %}<span class="text-muted" style="font-size:.78rem;">—</span>{% endif %}
+                </td>
+                <td>
+                  <small style="font-size:.78rem;">{{ user.joining_date.strftime('%d %b %Y') if user.joining_date else '—' }}</small>
+                </td>
+                <td class="tc">
+                  {% set s = user.today_status %}
+                  {% if s in ('Present','Completed') %}<span class="badge bg-success">Present</span>
+                  {% elif s == 'Absent' %}<span class="badge bg-danger">Absent</span>
+                  {% elif s == 'On Leave' %}<span class="badge bg-info text-dark">On Leave</span>
+                  {% elif s == 'Late' %}<span class="badge bg-warning text-dark">Late</span>
+                  {% elif s == 'Half Day' %}<span class="badge text-white" style="background:#f97316;">Half Day</span>
+                  {% elif s == 'Holiday' %}<span class="badge text-white" style="background:#7c3aed;">Holiday</span>
+                  {% elif s == 'Weekend' %}<span class="badge bg-secondary">Weekend</span>
+                  {% else %}<span class="text-muted" style="font-size:.78rem;">—</span>{% endif %}
+                </td>
+                <td class="tc">
+                  {% if user.appraisal_points is not none %}
+                    <span class="badge bg-success bg-opacity-10 text-success">{{ user.appraisal_points|round(2) }}</span>
+                  {% else %}<span class="text-muted" style="font-size:.78rem;">—</span>{% endif %}
+                </td>
+                <td class="tc">
+                  <div class="d-flex gap-1 justify-content-center">
+                    <a href="{{ url_for('admin.view_user', user_id=user.user_id) }}" class="btn btn-sm btn-icon btn-outline-primary" title="View"><i class="bi bi-eye"></i></a>
+                    <a href="{{ url_for('admin.edit_user', user_id=user.user_id) }}" class="btn btn-sm btn-icon btn-outline-success" title="Edit"><i class="bi bi-pencil"></i></a>
+                    <a href="{{ url_for('admin.enrol_face', user_id=user.user_id) }}" class="btn btn-sm btn-icon btn-outline-secondary" title="Enrol Face"><i class="bi bi-camera"></i></a>
+                    <form action="{{ url_for('admin.delete_user', user_id=user.user_id) }}" method="POST" style="display:inline;"
+                          onsubmit="return confirm('Delete {{ user.first_name }} {{ user.last_name }}? This cannot be undone.');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="btn btn-sm btn-icon btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></button>
                     </form>
                   </div>
                 </td>

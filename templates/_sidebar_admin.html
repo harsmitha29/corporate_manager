@@ -1,0 +1,73 @@
+<nav class="sidebar">
+  <div class="brand"><i class="bi bi-building"></i>Corp Manager</div>
+
+  <a href="{{ url_for('admin.admin_panel') }}"
+     class="{{ 'active' if request.endpoint in ['admin.admin_panel','admin.view_user','admin.edit_user','admin.create_employee','admin.enrol_face'] else '' }}">
+    <i class="bi bi-grid"></i>Dashboard
+  </a>
+
+  <a href="{{ url_for('attendance.admin_attendance_overview') }}"
+     class="{{ 'active' if request.endpoint in ['attendance.admin_attendance_overview','attendance.admin_team_summary'] else '' }}">
+    <i class="bi bi-calendar-check"></i>Attendance
+  </a>
+
+  <a href="{{ url_for('leaves.admin_leaves') }}"
+     class="{{ 'active' if request.endpoint == 'leaves.admin_leaves' else '' }}">
+    <i class="bi bi-calendar2-minus"></i>Leaves
+    <span class="nav-badge" id="badge-leaves"></span>
+  </a>
+
+  <a href="{{ url_for('regularization.admin_regularizations') }}"
+     class="{{ 'active' if request.endpoint == 'regularization.admin_regularizations' else '' }}">
+    <i class="bi bi-pencil-square"></i>Regularizations
+    <span class="nav-badge" id="badge-regs"></span>
+  </a>
+
+  <a href="{{ url_for('self_assessment.admin_self_assessments') }}"
+     class="{{ 'active' if request.endpoint in ['self_assessment.admin_self_assessments','self_assessment.admin_review_assessment_get'] else '' }}">
+    <i class="bi bi-star-half"></i>Self Assessments
+    <span class="nav-badge" id="badge-assess"></span>
+  </a>
+
+  <a href="{{ url_for('departments.admin_departments') }}"
+     class="{{ 'active' if request.endpoint == 'departments.admin_departments' else '' }}">
+    <i class="bi bi-diagram-3"></i>Departments
+  </a>
+
+  <a href="{{ url_for('holidays.admin_holidays') }}"
+     class="{{ 'active' if request.endpoint == 'holidays.admin_holidays' else '' }}">
+    <i class="bi bi-sun"></i>Holidays
+  </a>
+
+  <a href="{{ url_for('attendance.admin_team_summary') }}"
+     class="{{ 'active' if request.endpoint == 'attendance.admin_team_summary' else '' }}">
+    <i class="bi bi-bar-chart"></i>Team Summary
+  </a>
+
+  <a href="{{ url_for('auth.logout') }}" style="margin-top:1rem;">
+    <i class="bi bi-box-arrow-left"></i>Logout
+  </a>
+</nav>
+
+<script>
+async function loadSidebarBadges() {
+  try {
+    const res = await fetch("/api/admin/pending-counts");
+    if (!res.ok) return;
+    const d = await res.json();
+    function setBadge(id, count) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (count > 0) { el.textContent = count; el.style.display = 'inline-block'; }
+      else { el.style.display = 'none'; }
+    }
+    setBadge('badge-leaves',  d.leaves);
+    setBadge('badge-regs',    d.regularizations);
+    setBadge('badge-assess',  d.assessments);
+  } catch(e) {}
+}
+document.addEventListener('DOMContentLoaded', function() {
+  loadSidebarBadges();
+  setInterval(loadSidebarBadges, 30000);
+});
+</script>

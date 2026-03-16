@@ -1,0 +1,36 @@
+<nav class="sidebar">
+  <div class="brand"><i class="bi bi-building"></i>Corp Manager</div>
+
+  <a href="{{ url_for('attendance.user_dashboard') }}"
+     class="{{ 'active' if request.endpoint == 'attendance.user_dashboard' else '' }}">
+    <i class="bi bi-house"></i>Dashboard
+  </a>
+
+  <a href="{{ url_for('leaves.leaves') }}"
+     class="{{ 'active' if request.endpoint == 'leaves.leaves' else '' }}">
+    <i class="bi bi-calendar2-minus"></i>Leaves
+  </a>
+
+  <a href="{{ url_for('regularization.regularization') }}"
+     class="{{ 'active' if request.endpoint == 'regularization.regularization' else '' }}">
+    <i class="bi bi-pencil-square"></i>Regularization
+  </a>
+
+  <a href="#" style="opacity:0.45;cursor:not-allowed;pointer-events:none;" title="Coming soon">
+    <i class="bi bi-journal-text"></i>Daily Updates
+  </a>
+
+  <a href="{{ url_for('self_assessment.self_assessment') }}"
+     class="{{ 'active' if request.endpoint == 'self_assessment.self_assessment' else '' }}">
+    <i class="bi bi-star-half"></i>Self Assessment
+  </a>
+
+  <a href="{{ url_for('profile.profile') }}"
+     class="{{ 'active' if request.endpoint in ['profile.profile','profile.change_password'] else '' }}">
+    <i class="bi bi-person"></i>Profile
+  </a>
+
+  <a href="{{ url_for('auth.logout') }}" style="margin-top:1rem;">
+    <i class="bi bi-box-arrow-left"></i>Logout
+  </a>
+</nav>

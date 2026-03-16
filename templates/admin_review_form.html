@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Review Assessment</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    body { background:#f5f7fb; font-family:'Segoe UI',sans-serif; }
+    .sidebar { width:220px; min-height:100vh; background:#1e2a3a; position:fixed; top:0; left:0; z-index:100; padding:1.5rem 0; }
+    .sidebar .brand { color:#fff; font-weight:700; font-size:1.1rem; padding:0 1.25rem 1.5rem; border-bottom:1px solid #2d3f54; margin-bottom:1rem; }
+    .sidebar a { display:flex; align-items:center; gap:.6rem; color:#a0b0c0; text-decoration:none; padding:.55rem 1.25rem; font-size:.9rem; transition:background .15s,color .15s; }
+    .sidebar a:hover,.sidebar a.active { background:#2d3f54; color:#fff; }
+    .sidebar a i { font-size:1rem; }
+    .sidebar a .nav-badge { margin-left:auto; background:#ef4444; color:#fff; font-size:.62rem; font-weight:700; padding:1px 6px; border-radius:999px; min-width:18px; text-align:center; display:none; }
+    .main { margin-left:220px; min-height:100vh; }
+    .topbar { background:#fff; border-bottom:1px solid #e9ecef; padding:.75rem 1.75rem; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:90; }
+    .topbar .page-title { font-weight:600; font-size:1.05rem; color:#1e2a3a; }
+    .content { padding:1.75rem; max-width:700px; }
+    .card { border:none; border-radius:.75rem; box-shadow:0 2px 12px rgba(0,0,0,.06); }
+    .star-rating { display:flex; gap:8px; flex-direction:row-reverse; justify-content:flex-end; }
+    .star-rating input { display:none; }
+    .star-rating label { font-size:2rem; color:#d1d5db; cursor:pointer; transition:color .15s; }
+    .star-rating input:checked ~ label,
+    .star-rating label:hover,
+    .star-rating label:hover ~ label { color:#f59e0b; }
+    .emp-info { background:#1e2a3a; border-radius:.75rem; padding:1.25rem 1.5rem; display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem; }
+    .emp-av { width:48px; height:48px; border-radius:50%; background:#2563eb; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:1.1rem; flex-shrink:0; }
+    .emp-name { color:#fff; font-weight:600; font-size:1rem; }
+    .emp-meta { color:#a0b0c0; font-size:.82rem; }
+    .self-score-box { margin-left:auto; text-align:center; }
+    .self-score-val { font-size:1.6rem; font-weight:700; color:#fbbf24; line-height:1; }
+    .self-score-lbl { font-size:.65rem; color:#a0b0c0; text-transform:uppercase; letter-spacing:.05em; }
+  </style>
+</head>
+<body>
+
+{% include "_sidebar_admin.html" %}
+
+<div class="main">
+  <div class="topbar">
+    <span class="page-title">
+      <i class="bi bi-clipboard-check me-2 text-primary"></i>
+      Review: {{ assessment.first_name }} {{ assessment.last_name }}
+    </span>
+    <div class="d-flex align-items-center gap-2">
+      <a href="{{ url_for('self_assessment.admin_self_assessments') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> Back
+      </a>
+      <small class="text-muted ms-2">Logged in as Admin</small>
+    </div>
+  </div>
+
+  <div class="content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ 'danger' if category=='danger' else ('success' if category=='success' else 'warning') }} alert-dismissible fade show">
+          {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endwith %}
+
+    <!-- Employee info banner -->
+    <div class="emp-info">
+      {% set initials = (assessment.first_name[0]|upper + assessment.last_name[0]|upper) if assessment.first_name and assessment.last_name else '?' %}
+      <div class="emp-av">{{ initials }}</div>
+      <div>
+        <div class="emp-name">{{ assessment.first_name }} {{ assessment.last_name }}</div>
+        <div class="emp-meta">{{ assessment.email }} &middot; Cycle {{ assessment.cycle_number }}</div>
+      </div>
+      <div class="self-score-box">
+        <div class="self-score-val">{{ assessment.employee_rating }}/5</div>
+        <div class="self-score-lbl">Self Rating</div>
+      </div>
+    </div>
+
+    <!-- Employee's comment (read-only) -->
+    {% if assessment.employee_comment %}
+    <div class="card p-3 mb-4">
+      <div class="text-muted" style="font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:.5rem;">Employee's Comment</div>
+      <p class="mb-0" style="font-size:.9rem;color:#374151;">{{ assessment.employee_comment }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Admin review form -->
+    <div class="card p-4">
+      <h6 class="fw-semibold mb-3">Your Review</h6>
+      <form method="POST" action="{{ url_for('self_assessment.admin_review_assessment', sa_id=assessment.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="mb-4">
+          <label class="form-label fw-semibold" style="font-size:.875rem;">Admin Rating (0–5)</label>
+          <div class="star-rating" id="starRating">
+            {% for i in [5,4,3,2,1] %}
+            <input type="radio" name="admin_rating" id="astar{{ i }}" value="{{ i }}.0"
+                   {{ 'checked' if existing_review and existing_review.admin_rating == i else '' }}>
+            <label for="astar{{ i }}"><i class="bi bi-star-fill"></i></label>
+            {% endfor %}
+          </div>
+          <small class="text-muted d-block mt-1">Click to set your rating</small>
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label fw-semibold" style="font-size:.875rem;">Admin Comment <span class="text-muted fw-normal">(optional)</span></label>
+          <textarea name="admin_comment" class="form-control" rows="4"
+                    placeholder="Summarise performance, highlight achievements, provide guidance…">{{ existing_review.admin_comment if existing_review else '' }}</textarea>
+        </div>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary px-4">
+            <i class="bi bi-patch-check-fill me-1"></i>Submit Review
+          </button>
+          <a href="{{ url_for('self_assessment.admin_self_assessments') }}" class="btn btn-outline-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

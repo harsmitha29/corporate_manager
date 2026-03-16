@@ -3,138 +3,38 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Review Assessment</title>
+  <title>Self Assessments — Admin</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
   <style>
     body { background:#f5f7fb; font-family:'Segoe UI',sans-serif; }
     .sidebar { width:220px; min-height:100vh; background:#1e2a3a; position:fixed; top:0; left:0; z-index:100; padding:1.5rem 0; }
-    .sidebar .brand { color:#fff; font-weight:700; font-size:1.1rem; padding:0 1.25rem 1.5rem; border-bottom:1px solid #2d3f54; margin-bottom:1rem; display:flex; align-items:center; gap:.5rem; }
+    .sidebar .brand { color:#fff; font-weight:700; font-size:1.1rem; padding:0 1.25rem 1.5rem; border-bottom:1px solid #2d3f54; margin-bottom:1rem; }
     .sidebar a { display:flex; align-items:center; gap:.6rem; color:#a0b0c0; text-decoration:none; padding:.55rem 1.25rem; font-size:.9rem; transition:background .15s,color .15s; }
     .sidebar a:hover,.sidebar a.active { background:#2d3f54; color:#fff; }
-    .sidebar a i { font-size:1rem; }
     .main { margin-left:220px; min-height:100vh; }
     .topbar { background:#fff; border-bottom:1px solid #e9ecef; padding:.75rem 1.75rem; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:90; }
     .topbar .page-title { font-weight:600; font-size:1.05rem; color:#1e2a3a; }
-    .content { padding:1.75rem; max-width:1000px; }
+    .content { padding:1.75rem; }
     .card { border:none; border-radius:.75rem; box-shadow:0 2px 12px rgba(0,0,0,.06); }
-
-    /* Employee profile banner */
-    .emp-banner {
-      background:linear-gradient(135deg,#1e2a3a 0%,#2d3f54 100%);
-      border-radius:.85rem; padding:1.25rem 1.5rem;
-      display:flex; align-items:center; gap:1.25rem;
-      margin-bottom:1.5rem; flex-wrap:wrap;
-    }
-    .emp-av {
-      width:56px; height:56px; border-radius:50%;
-      background:linear-gradient(135deg,#2563eb,#7c3aed);
-      display:flex; align-items:center; justify-content:center;
-      color:#fff; font-weight:800; font-size:1.25rem; flex-shrink:0; letter-spacing:-.5px;
-    }
-    .emp-banner-info { flex:1; min-width:0; }
-    .emp-banner-name { font-size:1.1rem; font-weight:700; color:#fff; margin-bottom:2px; }
-    .emp-banner-meta { font-size:.8rem; color:#a0b0c0; display:flex; gap:1rem; flex-wrap:wrap; }
-    .emp-banner-meta span { display:flex; align-items:center; gap:4px; }
-    .banner-scores { display:flex; gap:1rem; align-items:center; flex-wrap:wrap; }
-    .bscore { text-align:center; }
-    .bscore-val { font-size:1.4rem; font-weight:800; color:#fff; line-height:1; }
-    .bscore-lbl { font-size:.65rem; color:#a0b0c0; text-transform:uppercase; letter-spacing:.05em; margin-top:2px; }
-
-    /* Section headers */
-    .section-hd { font-size:.72rem; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.07em; border-bottom:2px solid #e2e8f0; padding-bottom:.4rem; margin-bottom:1rem; }
-
-    /* Review rows: employee score vs manager override */
-    .review-row {
-      background:#fff; border:1.5px solid #f1f5f9; border-radius:.65rem;
-      padding:.9rem 1rem; margin-bottom:.6rem;
-      display:grid; grid-template-columns:1fr 180px 180px;
-      align-items:center; gap:1rem;
-      transition:border-color .15s, box-shadow .15s;
-    }
-    .review-row:hover { border-color:#bfdbfe; box-shadow:0 2px 8px rgba(37,99,235,.07); }
-    .rr-label { font-weight:600; font-size:.88rem; color:#1e293b; }
-    .rr-desc  { font-size:.75rem; color:#94a3b8; margin-top:2px; line-height:1.4; }
-
-    /* Employee's star display (read-only) */
-    .emp-stars { display:flex; align-items:center; gap:.35rem; }
-    .star-filled { color:#f59e0b; font-size:1rem; }
-    .star-empty  { color:#e2e8f0; font-size:1rem; }
-    .emp-score-val { font-size:.8rem; font-weight:700; color:#475569; margin-left:4px; }
-
-    /* Score colour classes */
-    .sv-1 { color:#ef4444; }
-    .sv-2 { color:#f97316; }
-    .sv-3 { color:#f59e0b; }
-    .sv-4 { color:#22c55e; }
-    .sv-5 { color:#2563eb; }
-
-    /* Manager override selector */
-    .mgr-select-wrap { display:flex; flex-direction:column; gap:3px; }
-    .mgr-select-label { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#64748b; }
-    .mgr-stars { display:flex; gap:3px; }
-    .mgr-stars input[type=radio] { display:none; }
-    .mgr-stars label { font-size:1.2rem; cursor:pointer; color:#e2e8f0; transition:color .1s; line-height:1; }
-    .mgr-stars { flex-direction:row-reverse; justify-content:flex-end; }
-    .mgr-stars label:hover,
-    .mgr-stars label:hover ~ label { color:#2563eb !important; }
-    .mgr-stars input[type=radio]:checked ~ label { color:#2563eb; }
-    .mgr-override-lbl { font-size:.72rem; font-weight:600; color:#2563eb; min-width:22px; }
-    .keep-emp-lbl { font-size:.7rem; color:#94a3b8; font-style:italic; }
-
-    /* Final score ring */
-    .final-ring-wrap { display:flex; align-items:center; gap:1.25rem; background:#f8faff; border:1px solid #e2e8f0; border-radius:.75rem; padding:1rem 1.25rem; }
-    .final-ring { width:80px; height:80px; border-radius:50%; background:conic-gradient(#2563eb 0deg,#e2e8f0 0deg); display:flex; align-items:center; justify-content:center; position:relative; flex-shrink:0; }
-    .final-ring::before { content:''; position:absolute; width:60px; height:60px; background:#f8faff; border-radius:50%; }
-    .final-ring-val { position:relative; z-index:1; font-size:1rem; font-weight:800; color:#1e2a3a; }
-    .final-ring-info .main-lbl { font-size:.95rem; font-weight:700; color:#1e2a3a; }
-    .final-ring-info .sub-lbl { font-size:.78rem; color:#64748b; margin-top:2px; }
-    .final-ring-info .desc-lbl { font-size:.82rem; font-weight:700; margin-top:4px; }
-
-    /* Read-only previous review box */
-    .prev-review-box { background:#f0fdf4; border:1.5px solid #86efac; border-radius:.75rem; padding:1.1rem 1.25rem; margin-bottom:1.5rem; }
-    .prev-review-box .prb-hd { font-weight:700; color:#15803d; font-size:.88rem; margin-bottom:.75rem; display:flex; align-items:center; gap:.5rem; }
-
-    /* Written reflection display */
-    .reflection-block { background:#f8faff; border:1px solid #e2e8f0; border-radius:.6rem; padding:.85rem 1rem; margin-bottom:.75rem; }
-    .reflection-block .rb-label { font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#64748b; margin-bottom:.35rem; }
-    .reflection-block .rb-text  { font-size:.85rem; color:#374151; line-height:1.6; }
-
-    @media(max-width:700px){
-      .review-row { grid-template-columns:1fr; }
-    }
+    .table th { font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; color:#6c757d; }
+    .badge { font-weight:500; font-size:.78em; }
+    .nav-tabs .nav-link { color:#6c757d; border-radius:6px 6px 0 0; }
+    .nav-tabs .nav-link.active { color:#0d6efd; font-weight:600; }
   </style>
 </head>
 <body>
 
-<nav class="sidebar">
-  <div class="brand"><i class="bi bi-building"></i>Corp Manager</div>
-  <a href="{{ url_for('admin.admin_panel') }}"><i class="bi bi-grid"></i>Dashboard</a>
-  <a href="{{ url_for('attendance.admin_attendance_overview') }}"><i class="bi bi-calendar-check"></i>Attendance</a>
-  <a href="{{ url_for('leaves.admin_leaves') }}"><i class="bi bi-calendar2-minus"></i>Leaves</a>
-  <a href="{{ url_for('regularization.admin_regularizations') }}"><i class="bi bi-pencil-square"></i>Regularizations</a>
-  <a href="{{ url_for('departments.admin_departments') }}"><i class="bi bi-diagram-3"></i>Departments</a>
-  <a href="{{ url_for('holidays.admin_holidays') }}"><i class="bi bi-sun"></i>Holidays</a>
-  <a href="{{ url_for('self_assessment.admin_self_assessments') }}" class="active"><i class="bi bi-star-half"></i>Appraisals</a>
-  <a href="{{ url_for('attendance.admin_team_summary') }}"><i class="bi bi-bar-chart"></i>Team Summary</a>
-  <a href="{{ url_for('auth.logout') }}" style="margin-top:1rem;"><i class="bi bi-box-arrow-left"></i>Logout</a>
-</nav>
+{% include "_sidebar_admin.html" %}
 
 <div class="main">
   <div class="topbar">
-    <span class="page-title">
-      <i class="bi bi-clipboard-check me-2 text-primary"></i>
-      Review: {{ assessment.first_name }} {{ assessment.last_name }}
-    </span>
-    <div class="d-flex align-items-center gap-2">
-      <a href="{{ url_for('self_assessment.admin_self_assessments', status='Under Review') }}" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-arrow-left"></i> Back
-      </a>
-      <small class="text-muted ms-2">Logged in as Admin</small>
-    </div>
+    <span class="page-title"><i class="bi bi-star-half me-2 text-primary"></i>Self Assessments</span>
+    <small class="text-muted">Logged in as Admin</small>
   </div>
 
   <div class="content">
+
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% for category, message in messages %}
         <div class="alert alert-{{ 'danger' if category=='danger' else ('success' if category=='success' else 'warning') }} alert-dismissible fade show" role="alert">
@@ -143,256 +43,103 @@
       {% endfor %}
     {% endwith %}
 
-    <!-- Employee banner -->
-    {% set initials = (assessment.first_name[0]|upper + assessment.last_name[0]|upper) if assessment.first_name and assessment.last_name else '?' %}
-    <div class="emp-banner">
-      <div class="emp-av">{{ initials }}</div>
-      <div class="emp-banner-info">
-        <div class="emp-banner-name">{{ assessment.first_name }} {{ assessment.last_name }}</div>
-        <div class="emp-banner-meta">
-          {% if assessment.designation %}<span><i class="bi bi-briefcase"></i>{{ assessment.designation }}</span>{% endif %}
-          {% if assessment.dept_name %}<span><i class="bi bi-diagram-3"></i>{{ assessment.dept_name }}</span>{% endif %}
-          {% if assessment.employee_id %}<span><i class="bi bi-person-badge"></i>{{ assessment.employee_id }}</span>{% endif %}
-          {% if assessment.joining_date %}<span><i class="bi bi-calendar3"></i>Joined {{ assessment.joining_date.strftime('%d %b %Y') }}</span>{% endif %}
-          <span><i class="bi bi-arrow-repeat"></i>Cycle {{ assessment.cycle_number }}</span>
+    <!-- Status tabs -->
+    <ul class="nav nav-tabs mb-4">
+      {% for s in statuses %}
+      <li class="nav-item">
+        <a class="nav-link {% if s == status_filter %}active{% endif %}"
+           href="{{ url_for('self_assessment.admin_self_assessments', status=s) }}">
+          {{ s }}
+          {% set c = counts.get(s, 0) %}
+          {% if c %}<span class="badge {% if s == status_filter %}bg-primary{% else %}bg-secondary{% endif %} ms-1">{{ c }}</span>{% endif %}
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+
+    {% if assessments %}
+    <div class="card">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th class="ps-3">Employee</th>
+                <th class="text-center">Cycle</th>
+                <th class="text-center">Self Rating</th>
+                {% if status_filter == 'Approved' %}<th class="text-center">Admin Rating</th><th class="text-center">Score</th>{% endif %}
+                <th>Submitted</th>
+                <th>Status</th>
+                {% if status_filter == 'Pending' %}<th class="text-center">Action</th>{% endif %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for sa in assessments %}
+              <tr>
+                <td class="ps-3">
+                  <div class="fw-semibold">{{ sa.first_name }} {{ sa.last_name }}</div>
+                  <small class="text-muted">{{ sa.email }}</small>
+                </td>
+                <td class="text-center"><span class="badge bg-info text-dark">Cycle {{ sa.cycle_number }}</span></td>
+                <td class="text-center fw-semibold">{{ sa.employee_rating }}/5.0</td>
+                {% if status_filter == 'Approved' %}
+                <td class="text-center fw-semibold">{{ sa.admin_rating or '—' }}</td>
+                <td class="text-center">
+                  {% if sa.appraisal_points %}
+                    <span class="badge bg-success">{{ sa.appraisal_points }}</span>
+                  {% else %}—{% endif %}
+                </td>
+                {% endif %}
+                <td><small>{{ sa.created_at.strftime('%d %b %Y') if sa.created_at else '—' }}</small></td>
+                <td>
+                  {% set sc = {'Pending':'warning text-dark','Approved':'success'} %}
+                  <span class="badge bg-{{ sc.get(sa.status,'secondary') }}">{{ sa.status }}</span>
+                </td>
+                {% if status_filter == 'Pending' %}
+                <td class="text-center">
+                  <a href="{{ url_for('self_assessment.admin_review_assessment_get', sa_id=sa.id) }}"
+                     class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-pencil-square me-1"></i>Review
+                  </a>
+                </td>
+                {% endif %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
         </div>
-      </div>
-      <div class="banner-scores">
-        <div class="bscore">
-          <div class="bscore-val">{{ assessment.self_score }}</div>
-          <div class="bscore-lbl">Self Score</div>
-        </div>
-        <div style="color:#4a5568;font-size:1.5rem;">/5.0</div>
-        {% if existing_review %}
-        <div class="bscore" style="margin-left:.5rem;">
-          <div class="bscore-val" style="color:#86efac;">{{ existing_review.final_score }}</div>
-          <div class="bscore-lbl">Final Score</div>
-        </div>
-        {% endif %}
       </div>
     </div>
 
-    <!-- If already reviewed: show read-only summary -->
-    {% if existing_review and assessment.status == 'Completed' %}
-    <div class="prev-review-box">
-      <div class="prb-hd"><i class="bi bi-patch-check-fill text-success"></i>Appraisal Completed — Final Score: <strong>{{ existing_review.final_score }}/5.0</strong></div>
-      <div style="font-size:.82rem;color:#374151;">
-        You can update your review below. The final score will be recalculated automatically.
-      </div>
+    {% if total_pages > 1 %}
+    <nav class="mt-3 d-flex justify-content-between align-items-center">
+      <small class="text-muted">Page {{ page }} of {{ total_pages }}</small>
+      <ul class="pagination pagination-sm mb-0">
+        <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+          <a class="page-link" href="{{ url_for('self_assessment.admin_self_assessments', status=status_filter, page=page-1) }}">&laquo; Prev</a>
+        </li>
+        {% for p in range(1, total_pages + 1) %}
+        <li class="page-item {% if p == page %}active{% endif %}">
+          <a class="page-link" href="{{ url_for('self_assessment.admin_self_assessments', status=status_filter, page=p) }}">{{ p }}</a>
+        </li>
+        {% endfor %}
+        <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+          <a class="page-link" href="{{ url_for('self_assessment.admin_self_assessments', status=status_filter, page=page+1) }}">Next &raquo;</a>
+        </li>
+      </ul>
+    </nav>
+    {% endif %}
+
+    {% else %}
+    <div class="text-center py-5">
+      <i class="bi bi-inbox fs-1 text-muted"></i>
+      <p class="mt-3 text-muted">No <strong>{{ status_filter }}</strong> assessments found.</p>
     </div>
     {% endif %}
 
-    <form method="POST" action="{{ url_for('self_assessment.admin_review_assessment', sa_id=assessment.id) }}" id="reviewForm">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-      <!-- Part 1: Per-criterion review -->
-      <div class="card mb-4">
-        <div class="card-body">
-          <div class="section-hd"><i class="bi bi-star me-1"></i>Part 1 — Criteria Review
-            <small class="text-muted fw-normal ms-2">Left = employee self-rating · Right = your override (leave unset to accept theirs)</small>
-          </div>
-
-          {% for q, label, desc in questions %}
-          {% set emp_val = assessment[q] or 0 %}
-          {% set mgr_val = existing_review[q] if existing_review else None %}
-          <div class="review-row" id="rrow_{{ q }}">
-            <!-- Criterion label -->
-            <div>
-              <div class="rr-label">{{ loop.index }}. {{ label }}</div>
-              <div class="rr-desc">{{ desc }}</div>
-            </div>
-
-            <!-- Employee's self-rating (read-only stars) -->
-            <div>
-              <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#94a3b8;margin-bottom:4px;">Employee Rating</div>
-              <div class="emp-stars">
-                {% for i in range(1,6) %}
-                  <i class="bi bi-star-fill {{ 'star-filled' if i <= emp_val else 'star-empty' }}"></i>
-                {% endfor %}
-                <span class="emp-score-val sv-{{ emp_val }}">{{ emp_val }}/5</span>
-              </div>
-            </div>
-
-            <!-- Manager override (interactive stars) -->
-            <div class="mgr-select-wrap">
-              <div class="mgr-select-label">Your Override
-                <span class="keep-emp-lbl" id="keep_{{ q }}_lbl">&nbsp;(keeping theirs)</span>
-              </div>
-              <div class="d-flex align-items-center gap-2">
-                <div class="mgr-stars" id="mstars_{{ q }}">
-                  {% for star in [5,4,3,2,1] %}
-                  <input type="radio" name="mgr_{{ q }}" id="mgr_{{ q }}_{{ star }}" value="{{ star }}"
-                         {{ 'checked' if mgr_val == star else '' }}
-                         onchange="onMgrStar('{{ q }}', {{ star }})">
-                  <label for="mgr_{{ q }}_{{ star }}" title="{{ star }}★">★</label>
-                  {% endfor %}
-                </div>
-                <span class="mgr-override-lbl" id="mgrlbl_{{ q }}">
-                  {% if mgr_val %}{{ mgr_val }}{% endif %}
-                </span>
-                <button type="button" class="btn btn-link btn-sm p-0 text-muted" title="Clear override"
-                        onclick="clearOverride('{{ q }}')" style="font-size:.7rem;">✕</button>
-              </div>
-            </div>
-          </div>
-          {% endfor %}
-
-          <!-- Live final score display -->
-          <div class="final-ring-wrap mt-3" id="finalRingWrap">
-            <div class="final-ring" id="finalRing">
-              <span class="final-ring-val" id="finalRingVal">—</span>
-            </div>
-            <div class="final-ring-info">
-              <div class="main-lbl">Calculated Final Score</div>
-              <div class="sub-lbl">Uses your override where set, employee's rating where not.</div>
-              <div class="desc-lbl" id="finalDesc"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Part 2: Employee's written reflections (read-only) -->
-      <div class="card mb-4">
-        <div class="card-body">
-          <div class="section-hd"><i class="bi bi-chat-text me-1"></i>Part 2 — Employee's Written Reflection</div>
-          <div class="row g-3">
-            {% if assessment.achievements %}
-            <div class="col-md-6">
-              <div class="reflection-block">
-                <div class="rb-label"><i class="bi bi-trophy-fill me-1" style="color:#f59e0b;"></i>Key Achievements</div>
-                <div class="rb-text">{{ assessment.achievements }}</div>
-              </div>
-            </div>
-            {% endif %}
-            {% if assessment.improvements %}
-            <div class="col-md-6">
-              <div class="reflection-block">
-                <div class="rb-label"><i class="bi bi-arrow-up-circle-fill me-1" style="color:#2563eb;"></i>Areas for Improvement</div>
-                <div class="rb-text">{{ assessment.improvements }}</div>
-              </div>
-            </div>
-            {% endif %}
-            {% if assessment.goals_next_period %}
-            <div class="col-md-6">
-              <div class="reflection-block">
-                <div class="rb-label"><i class="bi bi-bullseye me-1" style="color:#16a34a;"></i>Goals for Next Period</div>
-                <div class="rb-text">{{ assessment.goals_next_period }}</div>
-              </div>
-            </div>
-            {% endif %}
-            {% if assessment.blockers %}
-            <div class="col-md-6">
-              <div class="reflection-block">
-                <div class="rb-label"><i class="bi bi-exclamation-triangle-fill me-1" style="color:#dc2626;"></i>Blockers / Support Needed</div>
-                <div class="rb-text">{{ assessment.blockers }}</div>
-              </div>
-            </div>
-            {% endif %}
-            {% if not (assessment.achievements or assessment.improvements or assessment.goals_next_period or assessment.blockers) %}
-            <div class="col-12 text-muted" style="font-size:.85rem;"><i class="bi bi-dash-circle me-1"></i>No written reflection provided.</div>
-            {% endif %}
-          </div>
-        </div>
-      </div>
-
-      <!-- Part 3: Manager feedback -->
-      <div class="card mb-4">
-        <div class="card-body">
-          <div class="section-hd"><i class="bi bi-chat-quote me-1"></i>Part 3 — Your Feedback</div>
-          <div class="mb-3">
-            <label class="form-label fw-semibold" style="font-size:.88rem;">Manager's Comments <span class="text-muted fw-normal">(optional but recommended)</span></label>
-            <textarea name="manager_comments" class="form-control" rows="4"
-                      placeholder="Summarise your assessment, highlight achievements, provide guidance for growth…">{{ existing_review.manager_comments if existing_review else '' }}</textarea>
-          </div>
-        </div>
-      </div>
-
-      <!-- Submit -->
-      <div class="d-flex gap-2 align-items-center flex-wrap">
-        <button type="submit" class="btn btn-primary px-4" onclick="return confirmSubmit(event)">
-          <i class="bi bi-patch-check-fill"></i>
-          {{ 'Update Final Appraisal' if existing_review else 'Submit Final Appraisal' }}
-        </button>
-        <a href="{{ url_for('self_assessment.admin_self_assessments', status='Under Review') }}" class="btn btn-outline-secondary">
-          <i class="bi bi-arrow-left"></i> Back to List
-        </a>
-        <small class="text-muted ms-2">
-          <i class="bi bi-info-circle me-1"></i>
-          The final score will be saved to the employee's appraisal record and visible on their dashboard.
-        </small>
-      </div>
-
-    </form>
   </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
-<script>
-// ── Data initialisation ──────────────────────────────────────────
-const QUESTIONS = [{% for q, _, _ in questions %}"{{ q }}"{% if not loop.last %},{% endif %}{% endfor %}];
-const EMP_SCORES = {
-  {% for q, _, _ in questions %}
-  "{{ q }}": {{ assessment[q] or 0 }},
-  {% endfor %}
-};
-const MGR_SCORES = {};
-const SCORE_DESC = {
-  0:'', 1:'Needs Improvement', 2:'Below Expectations',
-  3:'Meets Expectations', 4:'Exceeds Expectations', 5:'Outstanding'
-};
-
-// Init override map from existing review
-QUESTIONS.forEach(q => {
-  const checked = document.querySelector(`input[name="mgr_${q}"]:checked`);
-  MGR_SCORES[q] = checked ? parseInt(checked.value) : null;
-  updateKeepLabel(q);
-});
-updateFinalRing();
-
-function onMgrStar(q, val) {
-  MGR_SCORES[q] = val;
-  document.getElementById('mgrlbl_' + q).textContent = val;
-  updateKeepLabel(q);
-  updateFinalRing();
-}
-
-function clearOverride(q) {
-  MGR_SCORES[q] = null;
-  document.querySelectorAll(`input[name="mgr_${q}"]`).forEach(r => r.checked = false);
-  document.getElementById('mgrlbl_' + q).textContent = '';
-  updateKeepLabel(q);
-  updateFinalRing();
-}
-
-function updateKeepLabel(q) {
-  const lbl = document.getElementById('keep_' + q + '_lbl');
-  if (!lbl) return;
-  if (MGR_SCORES[q]) {
-    lbl.textContent = '';
-  } else {
-    lbl.textContent = '\u00a0(keeping theirs)';
-  }
-}
-
-function updateFinalRing() {
-  const finals = QUESTIONS.map(q => MGR_SCORES[q] !== null && MGR_SCORES[q] !== undefined ? MGR_SCORES[q] : EMP_SCORES[q]);
-  const avg = finals.reduce((a,b)=>a+b,0) / finals.length;
-  const disp = avg.toFixed(2);
-  document.getElementById('finalRingVal').textContent = disp;
-  const pct = (avg / 5) * 360;
-  const col = avg >= 4 ? '#2563eb' : avg >= 3 ? '#22c55e' : avg >= 2 ? '#f59e0b' : '#ef4444';
-  document.getElementById('finalRing').style.background = `conic-gradient(${col} ${pct}deg, #e2e8f0 ${pct}deg)`;
-  const rounded = Math.round(avg);
-  const desc = document.getElementById('finalDesc');
-  desc.textContent = SCORE_DESC[rounded] || '';
-  desc.style.color = col;
-}
-
-function confirmSubmit(e) {
-  const finals = QUESTIONS.map(q => MGR_SCORES[q] !== null && MGR_SCORES[q] !== undefined ? MGR_SCORES[q] : EMP_SCORES[q]);
-  const avg = (finals.reduce((a,b)=>a+b,0) / finals.length).toFixed(2);
-  return confirm(`Submit final appraisal?\n\nFinal Score: ${avg}/5.0\n\nThis will be saved to the employee's appraisal record.`);
-}
-</script>
 </body>
 </html>

@@ -7,6 +7,11 @@ Admin management routes:
   GET/POST /admin/edit-user/<id>
   POST /admin/delete-user/<id>
 """
+import os
+import re
+import base64
+import random
+import string
 import mysql.connector
 from datetime import date
 from datetime import datetime as _dt
@@ -16,9 +21,10 @@ from dateutil.relativedelta import relativedelta
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 
 from config import CFG
-from extensions import get_db, logger
+from extensions import get_db, logger, csrf
 from schema.models import today_local, now_local
-from services.utils import audit_log, login_required, admin_required, is_valid_name, is_valid_email, validate_password
+from werkzeug.security import generate_password_hash as _gen_hash
+from services.utils import audit_log, login_required, admin_required, is_valid_name, is_valid_email, validate_password, api_ok, api_err
 from services.attendance import fill_missing_records_for_user, calc_work_hours
 from services.leave import get_monthly_summary
 from services.holiday import is_working_day
@@ -63,7 +69,7 @@ def admin_panel():
         where += " AND u.dept_id=%s"
         params.append(dept_filter)
 
-    cur.execute(f"""
+    cur.execute("""
         SELECT u.user_id, u.first_name, u.last_name, u.email,
                u.joining_date, u.designation, u.employee_id, d.dept_name,
                a.appraisal_points, a.cycle_number,
@@ -76,13 +82,13 @@ def admin_panel():
             AND a.cycle_number = (
                 SELECT MAX(a2.cycle_number) FROM tbl_appraisal a2 WHERE a2.user_id=u.user_id
             )
-        WHERE {where}
+        WHERE """ + where + """
         ORDER BY u.created_at DESC
         LIMIT %s OFFSET %s
     """, tuple(params + [PER_PAGE, offset]))
     users = cur.fetchall()
 
-    cur.execute(f"SELECT COUNT(*) AS total FROM tbl_users u WHERE {where}", tuple(params) if params else ())
+    cur.execute("SELECT COUNT(*) AS total FROM tbl_users u WHERE " + where, tuple(params) if params else ())
     total_pages = ceil(cur.fetchone()["total"] / PER_PAGE) or 1
 
     today = today_local()
@@ -164,7 +170,7 @@ def create_employee():
                 "(first_name,last_name,email,password,role_type,created_at,joining_date,"
                 "dept_id,designation,employee_id) "
                 "VALUES (%s,%s,%s,%s,'employee',NOW(),%s,%s,%s,%s)",
-                (first, last, email, pwd, joining_date, dept_id, designation, emp_id)
+                (first, last, email, _gen_hash(pwd), joining_date, dept_id, designation, emp_id)
             )
             new_id = cur.lastrowid
             conn.commit()
@@ -238,12 +244,26 @@ def view_user(user_id):
 
     n       = now_local()
     monthly = get_monthly_summary(user_id, n.year, n.month)
+
+    # Task 6.7: appraisal history for this employee
+    cur.execute("""
+        SELECT ap.cycle_number, ap.appraisal_points, ap.calculated_at,
+               sa.employee_rating, sa.admin_rating, sa.admin_comment,
+               sa.status AS sa_status, sa.reviewed_at
+        FROM tbl_appraisal ap
+        LEFT JOIN tbl_self_assessment sa
+               ON sa.user_id=ap.user_id AND sa.cycle_number=ap.cycle_number
+        WHERE ap.user_id=%s
+        ORDER BY ap.cycle_number DESC
+    """, (user_id,))
+    appraisal_history = cur.fetchall()
     cur.close(); conn.close()
 
     return render_template(
         "view_user.html",
         user=user, attendance=attendance,
         page=page, pages=pages, monthly=monthly,
+        appraisal_history=appraisal_history,
     )
 
 
@@ -331,7 +351,7 @@ def edit_user(user_id):
         "edit_user.html",
         user={**user, "cycle_dropdown": cd, "cycle_scores": cs2,
               "dept_id": row.get("dept_id"), "designation": row.get("designation"),
-              "employee_id": row.get("employee_id"),
+              "employee_id": row.get("employee_id"), "joining_date": row.get("joining_date"),
               "phone": row.get("phone"), "gender": row.get("gender")},
         departments=departments,
     )
@@ -370,3 +390,150 @@ def delete_user(user_id):
     finally:
         cur.close(); conn.close()
     return redirect(url_for("admin.admin_panel"))
+
+# ── Task 7.4: Admin password reset ──────────────────────────────────
+
+@admin_bp.route("/admin/reset-password/<int:user_id>", methods=["POST"])
+@admin_required
+def reset_password(user_id):
+    """
+    Generate a random 10-char temp password, hash it, save it,
+    and flash it once to the admin.
+    """
+    # Generate temp password that satisfies all validate_password() rules:
+    # 8+ chars, uppercase, lowercase, digit, special char, no spaces
+    specials  = "!@#$%^&*()-_=+"
+    alphabet  = string.ascii_letters + string.digits + specials
+    while True:
+        temp_pwd = (
+            random.choice(string.ascii_uppercase) +
+            random.choice(string.ascii_lowercase) +
+            random.choice(string.digits) +
+            random.choice(specials) +
+            ''.join(random.choices(alphabet, k=6))
+        )
+        temp_list = list(temp_pwd)
+        random.shuffle(temp_list)
+        temp_pwd = ''.join(temp_list)
+        # Verify it passes — regenerate if shuffle broke any rule (extremely rare)
+        if not any(c == ' ' for c in temp_pwd):
+            import re as _re
+            if (_re.search(r'[A-Z]', temp_pwd) and _re.search(r'[a-z]', temp_pwd)
+                    and _re.search(r'[0-9]', temp_pwd) and _re.search(r'[!@#$%^&*()\-_=+]', temp_pwd)):
+                break
+    hashed_pwd = _gen_hash(temp_pwd)
+
+    conn = get_db()
+    cur  = conn.cursor(dictionary=True)
+    try:
+        cur.execute(
+            "SELECT user_id, first_name, last_name FROM tbl_users WHERE user_id=%s AND is_active=1",
+            (user_id,)
+        )
+        emp = cur.fetchone()
+        if not emp:
+            flash("Employee not found", "danger")
+            return redirect(url_for("admin.admin_panel"))
+
+        cur.execute(
+            "UPDATE tbl_users SET password=%s WHERE user_id=%s",
+            (hashed_pwd, user_id)
+        )
+        conn.commit()
+        audit_log(conn, session["user_id"], "RESET_PASSWORD", f"target_user={user_id}")
+        conn.commit()
+        flash(
+            f"Password reset for {emp['first_name']} {emp['last_name']}. "
+            f"Temporary password: {temp_pwd}  — share this with the employee and ask them to change it.",
+            "success"
+        )
+    except Exception:
+        conn.rollback()
+        logger.exception("Password reset failed for user %s", user_id)
+        flash("Password reset failed", "danger")
+    finally:
+        cur.close(); conn.close()
+    return redirect(url_for("admin.edit_user", user_id=user_id))
+
+
+# ── Task 5.6 & 5.7: Admin face enrolment ────────────────────────────
+
+_ADMIN_DIR_       = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+FACE_DATASET_DIR  = os.path.join(_ADMIN_DIR_, "face_utils", "face_dataset", "images")
+
+
+@admin_bp.route("/admin/enrol-face/<int:user_id>", methods=["GET", "POST"])
+@csrf.exempt
+def enrol_face(user_id):
+    """Tasks 5.6 & 5.7: GET renders webcam page, POST saves base64 image."""
+    import traceback as _tb
+
+    # inline auth
+    if "user_id" not in session:
+        if request.method == "POST" or request.is_json:
+            return api_err("Authentication required", 401)
+        flash("Please login first", "warning")
+        return redirect(url_for("auth.login"))
+    if session.get("role") != "admin":
+        if request.method == "POST" or request.is_json:
+            return api_err("Unauthorized", 403)
+        flash("Unauthorized access", "danger")
+        return redirect(url_for("auth.login"))
+
+    try:
+        if request.method == "POST":
+            data    = request.get_json() or {}
+            img_b64 = data.get("image", "")
+            if not img_b64:
+                return api_err("No image data received", 400)
+            if "," in img_b64:
+                img_b64 = img_b64.split(",", 1)[1]
+            try:
+                img_bytes = base64.b64decode(img_b64)
+            except Exception:
+                return api_err("Invalid base64 image data", 400)
+            user_img_dir = os.path.join(FACE_DATASET_DIR, str(user_id))
+            os.makedirs(user_img_dir, exist_ok=True)
+            ts       = _dt.now().strftime("%Y%m%d_%H%M%S_%f")
+            filename = f"enrol_{ts}.jpg"
+            with open(os.path.join(user_img_dir, filename), "wb") as fh:
+                fh.write(img_bytes)
+            count = len([fn for fn in os.listdir(user_img_dir)
+                         if fn.lower().endswith((".jpg",".jpeg",".png"))])
+            try:
+                ac = get_db()
+                audit_log(ac, session["user_id"], "FACE_ENROL",
+                          f"enrolled_for={user_id} file={filename}")
+                ac.commit(); ac.close()
+            except Exception:
+                pass
+            return api_ok({"enrolled_count": count, "filename": filename},
+                          f"Saved. {count} image(s) enrolled.")
+
+        # GET
+        conn = get_db()
+        cur  = conn.cursor(dictionary=True)
+        cur.execute("SELECT user_id, first_name, last_name, employee_id "
+                    "FROM tbl_users WHERE user_id=%s AND is_active=1", (user_id,))
+        employee = cur.fetchone()
+        cur.close(); conn.close()
+        if not employee:
+            flash("Employee not found", "danger")
+            return redirect(url_for("admin.admin_panel"))
+        user_img_dir = os.path.join(FACE_DATASET_DIR, str(user_id))
+        enrolled_count = 0
+        if os.path.isdir(user_img_dir):
+            enrolled_count = len([fn for fn in os.listdir(user_img_dir)
+                                   if fn.lower().endswith((".jpg",".jpeg",".png"))])
+        return render_template("admin_enrol_face.html",
+                               employee=employee,
+                               enrolled_count=enrolled_count,
+                               enrol_pct=min(enrolled_count * 10, 100))
+
+    except Exception:
+        detail = _tb.format_exc()
+        logger.error("enrol_face failed user=%s — %s", user_id, detail.splitlines()[-1])
+        from flask import current_app
+        if current_app.debug:
+            return "<pre style='color:red;padding:20px'>" + detail + "</pre>", 500
+        return api_err("Server error: " + detail.splitlines()[-1], 500)

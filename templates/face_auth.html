@@ -95,8 +95,15 @@ video {
 <body>
 
 <div class="glass-card">
-    <h4 class="mb-1">Face Verification</h4>
-    <p class="opacity-75 mb-3">Please align your face inside the circle</p>
+    <h4 class="mb-1">
+      {% if action == 'wfh' %}WFH Check-in
+      {% elif action == 'checkout' %}Check Out
+      {% else %}Check In{% endif %}
+    </h4>
+    <p class="opacity-75 mb-3">
+      {% if action == 'wfh' %}Verify your face to mark Work From Home attendance
+      {% else %}Please align your face inside the circle{% endif %}
+    </p>
 
     <div class="scan-wrapper" id="scanRing">
         <video id="video" autoplay muted playsinline></video>
@@ -201,7 +208,7 @@ let finished     = false;
 
 const MAX_TIME      = 60 * 1000;
 const SCAN_INTERVAL = 3000;
-const endpoint = "{{ '/check_in' if action == 'checkin' else '/checkout' }}";
+const endpoint = "{{ '/check_in' if action == 'checkin' else ('/attendance/wfh' if action == 'wfh' else '/checkout') }}";
 
 // Task 3.6: polling interval for /get-attendance-status (10s), started after a terminal success
 let statusPollTimer = null;
@@ -288,21 +295,21 @@ function startScanning() {
             const data = await response.json();
 
             // Terminal success states — stop scanning
-            if (["success", "auto_checkin", "holiday", "already_checked_in",
+            if (["success", "wfh", "auto_checkin", "holiday", "already_checked_in",
                  "already_done", "unauthorized", "pending_checkout"].includes(data.status)) {
                 finished = true;
                 clearInterval(scanTimer);
                 stopCamera();
             }
 
-            // ── SUCCESS ──
-            if (data.status === "success") {
+            // ── SUCCESS (office check-in or WFH) ──
+            if (data.status === "success" || data.status === "wfh") {
                 scanRing.classList.add("success");
                 statusText.innerText = data.message || "Verified!";
                 successSound.play();
                 document.getElementById("successMsg").innerText = data.message || "Attendance marked successfully.";
                 showPopup("popSuccess", 2000, "/user/dashboard");
-                startStatusPolling("/user/dashboard");  // Task 3.6: confirm via poll
+                startStatusPolling("/user/dashboard");
 
             // ── AUTO CHECKIN ──
             } else if (data.status === "auto_checkin") {

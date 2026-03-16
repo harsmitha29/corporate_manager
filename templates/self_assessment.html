@@ -1,126 +1,209 @@
-"""
-app.py  — Entry point only.
-All business logic lives in:
-  config.py          — Config class
-  extensions.py      — DB pool, logger, rate limiter
-  schema/models.py   — Status constants, time helpers
-  schema/migrations.py — CREATE TABLE SQL + run_migrations()
-  services/utils.py     — Validators, api_ok/err, decorators, audit_log
-  services/holiday.py   — Holiday engine, is_working_day etc.
-  services/attendance.py— Check-in logic, fill_missing, nightly job
-  services/leave.py     — Leave balance, monthly summary
-  services/appraisal.py — Cycle management, score calculation
-  api/auth.py           — /, /login, /register, /logout, /health
-  api/admin.py          — Admin panel, create/edit/delete employee
-  api/attendance.py     — Dashboard, check-in, checkout, WFH, overview
-  api/leaves.py         — Leave application & admin approval
-  api/regularization.py — Attendance correction requests
-  api/self_assessment.py— Employee self-rating & admin review
-  api/departments.py    — Department CRUD
-  api/holidays.py       — Company holiday calendar
-  api/profile.py        — Change password, profile update
-  api/reports.py        — CSV export, live status, pending counts
-"""
-import os
-from datetime import timedelta
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Self Assessment</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    body { background:#f5f7fb; font-family:'Segoe UI',sans-serif; }
+    .sidebar { width:220px; min-height:100vh; background:#1e2a3a; position:fixed; top:0; left:0; z-index:100; padding:1.5rem 0; }
+    .sidebar .brand { color:#fff; font-weight:700; font-size:1.1rem; padding:0 1.25rem 1.5rem; border-bottom:1px solid #2d3f54; margin-bottom:1rem; }
+    .sidebar a { display:flex; align-items:center; gap:.6rem; color:#a0b0c0; text-decoration:none; padding:.55rem 1.25rem; font-size:.9rem; transition:background .15s,color .15s; }
+    .sidebar a:hover,.sidebar a.active { background:#2d3f54; color:#fff; }
+    .main { margin-left:220px; min-height:100vh; }
+    .topbar { background:#fff; border-bottom:1px solid #e9ecef; padding:.75rem 1.75rem; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:90; }
+    .topbar .page-title { font-weight:600; font-size:1.05rem; color:#1e2a3a; }
+    .content { padding:1.75rem; }
+    .card { border:none; border-radius:.75rem; box-shadow:0 2px 12px rgba(0,0,0,.06); }
+    .star-rating { display:flex; gap:6px; flex-direction:row-reverse; justify-content:flex-end; }
+    .star-rating input { display:none; }
+    .star-rating label { font-size:1.6rem; color:#d1d5db; cursor:pointer; transition:color .15s; }
+    .star-rating input:checked ~ label,.star-rating label:hover,.star-rating label:hover ~ label { color:#f59e0b; }
+    .cycle-card { border:1.5px solid #e5e7eb; border-radius:.65rem; padding:1rem 1.25rem; margin-bottom:.75rem; }
+    .cycle-card.current { border-color:#3b82f6; background:#eff6ff; }
+    .cycle-card.approved { border-color:#10b981; background:#f0fdf4; }
+    .badge { font-weight:500; font-size:.78em; }
+    .table th { font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; color:#6c757d; }
+  </style>
+</head>
+<body>
+{% include "_sidebar_employee.html" %}
+<div class="main">
+  <div class="topbar">
+    <span class="page-title"><i class="bi bi-star-half me-2 text-warning"></i>Self Assessment</span>
+    <small class="text-muted">Logged in as {{ session.get('first_name','') }} {{ session.get('last_name','') }}</small>
+  </div>
+  <div class="content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ 'danger' if category=='danger' else ('success' if category=='success' else 'warning') }} alert-dismissible fade show" role="alert">
+          {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endwith %}
 
-from flask import Flask, jsonify
-from apscheduler.schedulers.background import BackgroundScheduler
+    <div class="row g-4">
+      <div class="col-lg-6">
+        <div class="card p-4">
+          <h5 class="fw-semibold mb-1">Submit Self Assessment</h5>
+          <p class="text-muted mb-4" style="font-size:.875rem;">Rate your performance for the current cycle. You can update until admin approves.</p>
+          {% if available_cycles %}
+          <form method="POST" action="{{ url_for('self_assessment.self_assessment') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="mb-3">
+              <label class="form-label fw-semibold" style="font-size:.875rem;">Appraisal Cycle</label>
+              <select name="cycle_number" class="form-select form-select-sm" id="cycleSelect" onchange="checkCycleStatus()">
+                {% for cn in available_cycles %}
+                <option value="{{ cn }}" {% if cn == current_cycle %}selected{% endif %}>
+                  Cycle {{ cn }}{% if cn == current_cycle %} (Current){% endif %}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div id="approvedWarning" class="alert alert-warning py-2" style="font-size:.85rem;display:none;">
+              <i class="bi bi-lock-fill me-1"></i>This cycle has already been approved and cannot be updated.
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold" style="font-size:.875rem;">Your Rating (1–5)</label>
+              <div class="star-rating" id="starRating">
+                {% for i in [5,4,3,2,1] %}
+                <input type="radio" name="employee_rating" id="star{{ i }}" value="{{ i }}.0">
+                <label for="star{{ i }}"><i class="bi bi-star-fill"></i></label>
+                {% endfor %}
+              </div>
+              <small class="text-muted d-block mt-1">Click a star to rate</small>
+            </div>
+            <div class="mb-4">
+              <label class="form-label fw-semibold" style="font-size:.875rem;">Comments <span class="text-muted fw-normal">(optional)</span></label>
+              <textarea name="employee_comment" class="form-control" rows="3" placeholder="Describe your key achievements and goals…"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary" id="submitBtn">
+              <i class="bi bi-send me-1"></i>Submit Assessment
+            </button>
+          </form>
+          {% else %}
+          <div class="text-center py-4 text-muted">
+            {% if assessments %}
+              <i class="bi bi-check-circle fs-1 d-block mb-2 text-success"></i>
+              <div style="font-size:.95rem;font-weight:500;color:#065f46;">All cycles submitted!</div>
+              <div style="font-size:.85rem;margin-top:.5rem;">
+                Your next cycle will be available after completing the next 6-month period.
+              </div>
+            {% else %}
+              <i class="bi bi-hourglass-split fs-1 d-block mb-2"></i>
+              <div style="font-size:.9rem;">No appraisal cycles available yet.</div>
+              <div style="font-size:.8rem;margin-top:.25rem;">Cycles are created after each 6-month period from your joining date.</div>
+            {% endif %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
 
-from config import CFG
-from extensions import logger
-from schema.migrations import run_migrations
-from services.holiday import (
-    clear_holiday_cache, load_holidays_for_year, load_company_holidays_into_cache,
-)
-from services.attendance import (
-    fill_missing_records_for_all_users,
-    mark_absent_and_holidays_for_all_users,
-    auto_close_pending_checkouts_for_all_users,
-)
-from schema.models import today_local
-from api import register_blueprints
+      <div class="col-lg-6">
+        <div class="card p-4">
+          <h5 class="fw-semibold mb-3">Submitted Assessments</h5>
+          {% if assessments %}
+            {% for sa in assessments %}
+            <div class="cycle-card {% if sa.status == 'Approved' %}approved{% elif sa.cycle_number == current_cycle %}current{% endif %}">
+              <div class="d-flex justify-content-between align-items-start mb-1">
+                <span class="fw-semibold" style="font-size:.9rem;">Cycle {{ sa.cycle_number }}</span>
+                {% set sc = {'Pending':'warning text-dark','Approved':'success'} %}
+                <span class="badge bg-{{ sc.get(sa.status,'secondary') }}">{{ sa.status }}</span>
+              </div>
+              <div class="d-flex gap-3 flex-wrap" style="font-size:.82rem;color:#6c757d;">
+                <span><i class="bi bi-star-fill text-warning me-1"></i>Self: <strong>{{ sa.employee_rating }}/5</strong></span>
+                {% if sa.admin_rating %}<span><i class="bi bi-person-check me-1"></i>Admin: <strong>{{ sa.admin_rating }}/5</strong></span>{% endif %}
+                {% if sa.appraisal_points %}<span><i class="bi bi-trophy-fill text-success me-1"></i>Score: <strong>{{ sa.appraisal_points }}</strong></span>{% endif %}
+              </div>
+              {% if sa.employee_comment %}
+              <div class="mt-1" style="font-size:.8rem;color:#374151;">"{{ sa.employee_comment[:80] }}{% if sa.employee_comment|length > 80 %}…{% endif %}"</div>
+              {% endif %}
+            </div>
+            {% endfor %}
+          {% else %}
+          <div class="text-center py-4 text-muted">
+            <i class="bi bi-inbox fs-1 d-block mb-2"></i>No assessments submitted yet.
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
 
+    {% if assessments %}
+    <div class="card mt-4">
+      <div class="card-header bg-white fw-semibold border-bottom py-3">
+        <i class="bi bi-clock-history me-2 text-secondary"></i>Appraisal History
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th class="ps-3">Cycle</th>
+                <th class="text-center">Self Rating</th>
+                <th class="text-center">Admin Rating</th>
+                <th class="text-center">Final Score</th>
+                <th>Status</th>
+                <th>Approved On</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for sa in assessments %}
+              <tr>
+                <td class="ps-3">
+                  <span class="badge bg-info text-dark">Cycle {{ sa.cycle_number }}</span>
+                  {% if sa.cycle_number == current_cycle %}<span class="badge bg-primary ms-1">Current</span>{% endif %}
+                </td>
+                <td class="text-center fw-semibold">{{ sa.employee_rating }}/5.0</td>
+                <td class="text-center">
+                  {% if sa.admin_rating %}<span class="fw-semibold">{{ sa.admin_rating }}/5.0</span>
+                  {% else %}<span class="text-muted">Pending</span>{% endif %}
+                </td>
+                <td class="text-center">
+                  {% if sa.appraisal_points %}<span class="badge bg-success">{{ sa.appraisal_points }}/5.0</span>
+                  {% else %}<span class="text-muted">—</span>{% endif %}
+                </td>
+                <td>
+                  {% set sc = {'Pending':'warning text-dark','Approved':'success'} %}
+                  <span class="badge bg-{{ sc.get(sa.status,'secondary') }}">{{ sa.status }}</span>
+                </td>
+                <td><small class="text-muted">
+                  {% if sa.reviewed_at %}
+                    {% if sa.reviewed_at is string %}{{ sa.reviewed_at[:10] }}
+                    {% elif sa.reviewed_at.__class__.__name__ == 'timedelta' %}—
+                    {% else %}{{ sa.reviewed_at.strftime('%d %b %Y') }}
+                    {% endif %}
+                  {% else %}—{% endif %}
+                </small></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
 
-# ── Create Flask app ─────────────────────────────────────────────────
-BASE_DIR         = os.path.dirname(os.path.abspath(__file__))
-FACE_DATASET_DIR = os.path.join(BASE_DIR, "face_utils", "face_dataset", "images")
-
-app = Flask(__name__)
-app.secret_key = CFG.SECRET_KEY
-app.permanent_session_lifetime = timedelta(hours=CFG.SESSION_HOURS)
-app.config.update(
-    SESSION_COOKIE_HTTPONLY = True,
-    SESSION_COOKIE_SAMESITE = "Lax",
-    SESSION_COOKIE_SECURE   = os.environ.get("HTTPS", "false").lower() == "true",
-)
-
-
-# ── Security headers ─────────────────────────────────────────────────
-@app.after_request
-def set_security_headers(response):
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"]         = "SAMEORIGIN"
-    response.headers["Referrer-Policy"]          = "strict-origin-when-cross-origin"
-    return response
-
-
-# ── Error handlers ───────────────────────────────────────────────────
-@app.errorhandler(404)
-def not_found(e):
-    return jsonify({"ok": False, "message": "Not found"}), 404
-
-@app.errorhandler(500)
-def server_error(e):
-    return jsonify({"ok": False, "message": "Server error"}), 500
-
-@app.errorhandler(429)
-def too_many_requests(e):
-    return jsonify({"ok": False, "message": "Too many requests"}), 429
-
-
-# ── Register all blueprints ──────────────────────────────────────────
-register_blueprints(app)
-
-
-# ── Startup & scheduler ──────────────────────────────────────────────
-if __name__ == "__main__":
-    clear_holiday_cache()
-    current_year = today_local().year
-    for y in [current_year - 1, current_year, current_year + 1]:
-        load_holidays_for_year(y)
-    logger.info("Holiday cache loaded for years: %s", sorted({current_year - 1, current_year, current_year + 1}))
-
-    run_migrations()
-
-    load_company_holidays_into_cache()
-    logger.info("Company holidays merged into cache.")
-
-    fill_missing_records_for_all_users()
-    logger.info("Initial fill completed for all employees.")
-
-    scheduler = BackgroundScheduler(daemon=True, timezone=str(CFG.TIMEZONE))
-    scheduler.add_job(
-        mark_absent_and_holidays_for_all_users,
-        "cron", hour=CFG.ABSENT_CUTOFF_HOUR, minute=CFG.ABSENT_CUTOFF_MINUTE,
-        id="nightly_job", replace_existing=True,
-    )
-    scheduler.add_job(
-        auto_close_pending_checkouts_for_all_users,
-        "cron", hour=CFG.ABSENT_CUTOFF_HOUR, minute=CFG.ABSENT_CUTOFF_MINUTE - 1,
-        id="nightly_autoclose", replace_existing=True,
-    )
-    scheduler.add_job(
-        lambda: load_holidays_for_year(today_local().year),
-        "cron", month=1, day=1, hour=0, minute=5,
-        id="holiday_refresh", replace_existing=True,
-    )
-    scheduler.start()
-    logger.info("Scheduler started. Timezone: %s", CFG.TIMEZONE)
-
-    app.run(
-        host  = "0.0.0.0",
-        port  = int(os.environ.get("PORT", 5000)),
-        debug = os.environ.get("FLASK_DEBUG", "false").lower() == "true",
-        use_reloader = False,
-    )
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+<script>
+  const approvedCycles = {{ assessments | selectattr('status','equalto','Approved') | map(attribute='cycle_number') | list | tojson }};
+  function checkCycleStatus() {
+    const cn  = parseInt(document.getElementById('cycleSelect').value);
+    const warn = document.getElementById('approvedWarning');
+    const btn  = document.getElementById('submitBtn');
+    if (approvedCycles.includes(cn)) {
+      warn.style.display = 'block';
+      btn.disabled = true;
+    } else {
+      warn.style.display = 'none';
+      btn.disabled = false;
+    }
+  }
+  if (document.getElementById('cycleSelect')) checkCycleStatus();
+</script>
+</body>
+</html>

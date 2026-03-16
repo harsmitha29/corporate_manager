@@ -41,7 +41,7 @@ def ensure_appraisal_cycles(user_id: int, cur, conn) -> None:
 
         months_done = cycle_number * 6
         cur.execute(
-            "SELECT id FROM tbl_appraisal WHERE user_id=%s AND cycle_number=%s",
+            "SELECT 1 FROM tbl_appraisal WHERE user_id=%s AND cycle_number=%s",
             (user_id, cycle_number)
         )
         if not cur.fetchone():
@@ -85,8 +85,8 @@ def calculate_appraisal_score(
             WHERE user_id=%s AND attendance_date BETWEEN %s AND %s
         """, (user_id, cycle_start, cycle_end))
         att_row      = cur.fetchone()
-        present_days = att_row["present_days"] or 0
-        working_days = att_row["working_days"] or 1
+        present_days = float(att_row["present_days"] or 0)
+        working_days = float(att_row["working_days"] or 1)
         attendance_pct = present_days / working_days
 
         # ── Daily update rate ──────────────────────────────────────
@@ -95,7 +95,7 @@ def calculate_appraisal_score(
             "WHERE user_id=%s AND update_date BETWEEN %s AND %s",
             (user_id, cycle_start, cycle_end)
         )
-        update_cnt = cur.fetchone()["cnt"] or 0
+        update_cnt = float(cur.fetchone()["cnt"] or 0)
         update_pct = min(update_cnt / max(working_days, 1), 1.0)
 
         # ── Self-assessment rating ────────────────────────────────
@@ -109,7 +109,7 @@ def calculate_appraisal_score(
             sa = cur.fetchone()
             if sa:
                 rating   = sa["admin_rating"] if sa["admin_rating"] is not None else sa["employee_rating"]
-                self_pct = (rating or 0.0) / 5.0
+                self_pct = float(rating or 0.0) / 5.0
 
         score = (attendance_pct * 0.40 + update_pct * 0.30 + self_pct * 0.30) * 5.0
         return round(min(score, 5.0), 2)

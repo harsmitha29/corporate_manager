@@ -6,6 +6,7 @@ Leave management routes:
   GET      /admin/leaves
   POST     /admin/leaves/<id>/action
 """
+from math import ceil
 from datetime import timedelta
 from datetime import datetime as _dt
 
@@ -108,26 +109,59 @@ def leaves():
 @leaves_bp.route("/leaves/<int:leave_id>/cancel", methods=["POST"])
 @login_required
 def cancel_leave(leave_id):
+    """
+    Task 4.6: cancel a Pending or Approved leave.
+    For Approved leaves, also revert any tbl_attendance rows that were set
+    to 'On Leave' back to 'Absent' so the nightly job can re-evaluate them.
+    """
     user_id = session["user_id"]
     conn    = get_db()
     cur     = conn.cursor(dictionary=True)
     try:
         cur.execute(
-            "SELECT id,status FROM tbl_leaves WHERE id=%s AND user_id=%s",
+            "SELECT id, status, start_date, end_date FROM tbl_leaves WHERE id=%s AND user_id=%s",
             (leave_id, user_id)
         )
         lv = cur.fetchone()
         if not lv:
             flash("Leave not found", "danger")
             return redirect(url_for("leaves.leaves"))
-        if lv["status"] != LeaveStatus.PENDING:
-            flash("Only pending leaves can be cancelled", "danger")
+        if lv["status"] not in (LeaveStatus.PENDING, LeaveStatus.APPROVED):
+            flash("Only pending or approved leaves can be cancelled", "danger")
             return redirect(url_for("leaves.leaves"))
-        cur.execute("UPDATE tbl_leaves SET status=%s WHERE id=%s", (LeaveStatus.CANCELLED, leave_id))
+
+        cur.execute(
+            "UPDATE tbl_leaves SET status=%s, reviewed_at=NOW() WHERE id=%s",
+            (LeaveStatus.CANCELLED, leave_id)
+        )
+
+        # Task 4.6: revert attendance rows that were set to On Leave back to Absent
+        if lv["status"] == LeaveStatus.APPROVED:
+            start_date = lv["start_date"]
+            end_date   = lv["end_date"]
+            if hasattr(start_date, "date"):
+                start_date = start_date.date()
+            if hasattr(end_date, "date"):
+                end_date = end_date.date()
+
+            cur_d = start_date
+            while cur_d <= end_date:
+                if is_working_day(cur_d):
+                    cur.execute(
+                        "UPDATE tbl_attendance "
+                        "SET status=%s, check_in=NULL, check_out=NULL "
+                        "WHERE user_id=%s AND attendance_date=%s AND status=%s",
+                        (AttendanceStatus.ABSENT, user_id, cur_d, AttendanceStatus.ON_LEAVE)
+                    )
+                cur_d += timedelta(days=1)
+
         conn.commit()
-        flash("Leave cancelled", "success")
+        audit_log(conn, user_id, "LEAVE_CANCEL", f"leave_id={leave_id}")
+        conn.commit()
+        flash("Leave cancelled successfully", "success")
     except Exception:
         conn.rollback()
+        logger.exception("cancel_leave failed for leave_id=%s", leave_id)
         flash("Failed to cancel leave", "danger")
     finally:
         cur.close(); conn.close()
@@ -137,23 +171,45 @@ def cancel_leave(leave_id):
 @leaves_bp.route("/admin/leaves")
 @admin_required
 def admin_leaves():
+    """
+    Task 4.4: paginated list (20/page) with status filter tabs that show counts.
+    """
     status_filter = request.args.get("status", LeaveStatus.PENDING)
+    page          = max(1, int(request.args.get("page", 1)))
+    per_page      = 20
+    offset        = (page - 1) * per_page
+
     conn = get_db()
     cur  = conn.cursor(dictionary=True)
+
+    # counts for tab badges
+    cur.execute(
+        "SELECT status, COUNT(*) AS cnt FROM tbl_leaves GROUP BY status"
+    )
+    counts = {r["status"]: r["cnt"] for r in cur.fetchall()}
+
+    cur.execute("SELECT COUNT(*) AS total FROM tbl_leaves WHERE status=%s", (status_filter,))
+    total       = (cur.fetchone() or {}).get("total", 0)
+    total_pages = max(1, ceil(total / per_page))
+
     cur.execute("""
         SELECT l.*, u.first_name, u.last_name, u.email
         FROM tbl_leaves l
         JOIN tbl_users u ON u.user_id=l.user_id
         WHERE l.status=%s
         ORDER BY l.applied_at DESC
-    """, (status_filter,))
+        LIMIT %s OFFSET %s
+    """, (status_filter, per_page, offset))
     leaves_list = cur.fetchall()
     cur.close(); conn.close()
+
     return render_template(
         "admin_leaves.html",
         leaves=leaves_list,
         status_filter=status_filter,
         statuses=[LeaveStatus.PENDING, LeaveStatus.APPROVED, LeaveStatus.REJECTED],
+        counts=counts,
+        page=page, per_page=per_page, total_pages=total_pages,
     )
 
 
@@ -176,6 +232,22 @@ def admin_leave_action(leave_id):
         if not lv or lv["status"] != LeaveStatus.PENDING:
             flash("Leave not found or already processed", "danger")
             return redirect(url_for("leaves.admin_leaves"))
+
+        # Task 4.2: re-check balance at the moment of approval — it may have changed
+        # since the employee applied (another leave may have been approved in between)
+        if new_status == LeaveStatus.APPROVED and lv["leave_type"] != LeaveType.UNPAID:
+            start_year = lv["start_date"]
+            if hasattr(start_year, "date"):
+                start_year = start_year.date()
+            current_balance = get_leave_balance(lv["user_id"], start_year.year)
+            if current_balance.get(lv["leave_type"], 0) < lv["days_count"]:
+                flash(
+                    f"Cannot approve: insufficient {lv['leave_type']} leave balance "
+                    f"(needs {lv['days_count']} day(s), "
+                    f"available {current_balance.get(lv['leave_type'], 0)})",
+                    "danger"
+                )
+                return redirect(url_for("leaves.admin_leaves"))
 
         cur.execute(
             "UPDATE tbl_leaves SET status=%s, admin_comments=%s, reviewed_at=NOW() WHERE id=%s",

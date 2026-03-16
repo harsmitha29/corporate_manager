@@ -42,17 +42,7 @@
 </head>
 <body>
 
-<nav class="sidebar">
-  <div class="brand"><i class="bi bi-building"></i>Corp Manager</div>
-  <a href="{{ url_for('admin.admin_panel') }}"><i class="bi bi-grid"></i>Dashboard</a>
-  <a href="{{ url_for('attendance.admin_attendance_overview') }}"><i class="bi bi-calendar-check"></i>Attendance</a>
-  <a href="{{ url_for('leaves.admin_leaves') }}"><i class="bi bi-calendar2-minus"></i>Leaves</a>
-  <a href="{{ url_for('regularization.admin_regularizations') }}"><i class="bi bi-pencil-square"></i>Regularizations</a>
-  <a href="{{ url_for('departments.admin_departments') }}"><i class="bi bi-diagram-3"></i>Departments</a>
-  <a href="{{ url_for('holidays.admin_holidays') }}"><i class="bi bi-sun"></i>Holidays</a>
-  <a href="{{ url_for('attendance.admin_team_summary') }}" class="active"><i class="bi bi-bar-chart"></i>Team Summary</a>
-  <a href="{{ url_for('auth.logout') }}" style="margin-top:1rem;"><i class="bi bi-box-arrow-left"></i>Logout</a>
-</nav>
+{% include "_sidebar_admin.html" %}
 
 <div class="main">
   <div class="topbar">
@@ -116,15 +106,15 @@
                   <div class="fw-semibold">{{ emp.name }}</div>
                   {% if emp.employee_id and emp.employee_id != '—' %}<small class="text-muted">{{ emp.employee_id }}</small>{% endif %}
                 </td>
-                <td class="text-center fw-semibold">{{ emp.working_days }}</td>
-                <td class="text-center"><span class="text-success fw-semibold">{{ emp.present }}</span></td>
-                <td class="text-center"><span class="text-danger fw-semibold">{{ emp.absent }}</span></td>
-                <td class="text-center"><span class="text-warning fw-semibold">{{ emp.late }}</span></td>
-                <td class="text-center"><span class="fw-semibold" style="color:#f97316;">{{ emp.half_day }}</span></td>
-                <td class="text-center"><span class="text-primary fw-semibold">{{ emp.on_leave }}</span></td>
-                <td class="text-center"><span class="text-muted fw-semibold">{{ emp.holidays }}</span></td>
+                <td class="text-center fw-semibold">{{ emp.working_days or 0 }}</td>
+                <td class="text-center"><span class="text-success fw-semibold">{{ emp.present or 0 }}</span></td>
+                <td class="text-center"><span class="text-danger fw-semibold">{{ emp.absent or 0 }}</span></td>
+                <td class="text-center"><span class="text-warning fw-semibold">{{ emp.late or 0 }}</span></td>
+                <td class="text-center"><span class="fw-semibold" style="color:#f97316;">{{ emp.half_day or 0 }}</span></td>
+                <td class="text-center"><span class="text-primary fw-semibold">{{ emp.on_leave or 0 }}</span></td>
+                <td class="text-center"><span class="text-muted fw-semibold">{{ emp.holidays or 0 }}</span></td>
                 <td class="text-center">
-                  {% set pct = emp.attendance_pct if emp.attendance_pct is defined else 0 %}
+                  {% set pct = (emp.attendance_pct | float) if emp.attendance_pct else 0.0 %}
                   <div class="d-flex align-items-center gap-2">
                     <div class="progress flex-grow-1" style="height:8px;">
                       <div class="progress-bar bg-primary" style="width:{{ [pct,100]|min }}%"></div>

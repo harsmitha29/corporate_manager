@@ -99,17 +99,7 @@
 </head>
 <body>
 
-<nav class="sidebar">
-  <div class="brand"><i class="bi bi-building"></i>Corp Manager</div>
-  <a href="{{ url_for('admin.admin_panel') }}"><i class="bi bi-grid"></i>Dashboard</a>
-  <a href="{{ url_for('attendance.admin_attendance_overview') }}"><i class="bi bi-calendar-check"></i>Attendance</a>
-  <a href="{{ url_for('leaves.admin_leaves') }}"><i class="bi bi-calendar2-minus"></i>Leaves</a>
-  <a href="{{ url_for('regularization.admin_regularizations') }}"><i class="bi bi-pencil-square"></i>Regularizations</a>
-  <a href="{{ url_for('departments.admin_departments') }}"><i class="bi bi-diagram-3"></i>Departments</a>
-  <a href="{{ url_for('holidays.admin_holidays') }}" class="active"><i class="bi bi-sun"></i>Holidays</a>
-  <a href="{{ url_for('attendance.admin_team_summary') }}"><i class="bi bi-bar-chart"></i>Team Summary</a>
-  <a href="{{ url_for('auth.logout') }}" style="margin-top:1rem;"><i class="bi bi-box-arrow-left"></i>Logout</a>
-</nav>
+{% include "_sidebar_admin.html" %}
 
 <div class="main">
   <div class="topbar">

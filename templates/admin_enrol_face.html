@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>Enrol Face — {{ employee.first_name }} {{ employee.last_name }}</title>
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    body { background: #f5f7fb; font-family: 'Segoe UI', sans-serif; }
+    .sidebar {
+      width: 220px; min-height: 100vh; background: #1e2a3a;
+      position: fixed; top: 0; left: 0; z-index: 100;
+      padding: 1.5rem 0;
+    }
+    .sidebar .brand {
+      color: #fff; font-weight: 700; font-size: 1.1rem;
+      padding: 0 1.25rem 1.5rem; border-bottom: 1px solid #2d3f54;
+      margin-bottom: 1rem;
+    }
+    .sidebar a {
+      display: flex; align-items: center; gap: .6rem;
+      color: #a0b0c0; text-decoration: none; padding: .55rem 1.25rem;
+      font-size: .9rem; transition: background .15s, color .15s;
+    }
+    .sidebar a:hover, .sidebar a.active { background: #2d3f54; color: #fff; }
+    .main { margin-left: 220px; min-height: 100vh; }
+    .topbar {
+      background: #fff; border-bottom: 1px solid #e9ecef;
+      padding: .75rem 1.75rem; display: flex;
+      align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 90;
+    }
+    .content { padding: 1.75rem; }
+    .card { border: none; border-radius: .75rem; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+    #videoBox { width: 100%; max-width: 480px; border-radius: .5rem; background: #000; }
+    #canvas  { display: none; }
+    .snap-count { font-size: 2rem; font-weight: 700; color: #0d6efd; }
+  </style>
+</head>
+<body>
+
+{% include "_sidebar_admin.html" %}
+
+<div class="main">
+  <div class="topbar">
+    <span style="font-weight:600;font-size:1.05rem;color:#1e2a3a;">
+      <i class="bi bi-camera me-2 text-primary"></i>
+      Face Enrolment — {{ employee.first_name }} {{ employee.last_name }}
+    </span>
+    <a href="{{ url_for('admin.admin_panel') }}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i>Back
+    </a>
+  </div>
+
+  <div class="content">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ 'danger' if category == 'danger' else ('success' if category == 'success' else 'warning') }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endwith %}
+
+    <div class="row g-4">
+
+      <!-- Left: webcam -->
+      <div class="col-lg-7">
+        <div class="card p-4">
+          <h5 class="mb-3 fw-semibold">Webcam Capture</h5>
+          <video id="videoBox" autoplay playsinline></video>
+          <canvas id="canvas"></canvas>
+          <div class="d-flex gap-2 mt-3 flex-wrap">
+            <button class="btn btn-primary" id="btnStart">
+              <i class="bi bi-camera-video me-1"></i>Start Camera
+            </button>
+            <button class="btn btn-success" id="btnSnap" disabled>
+              <i class="bi bi-camera me-1"></i>Capture Image
+            </button>
+            <button class="btn btn-outline-secondary" id="btnStop" disabled>
+              <i class="bi bi-stop-circle me-1"></i>Stop Camera
+            </button>
+          </div>
+          <div id="snapMsg" class="mt-2 text-muted" style="font-size:.875rem;"></div>
+        </div>
+      </div>
+
+      <!-- Right: info + status -->
+      <div class="col-lg-5">
+        <div class="card p-4 mb-3">
+          <h6 class="fw-semibold mb-3">Employee Details</h6>
+          <table class="table table-sm table-borderless mb-0" style="font-size:.9rem;">
+            <tr><td class="text-muted">Name</td><td class="fw-semibold">{{ employee.first_name }} {{ employee.last_name }}</td></tr>
+            <tr><td class="text-muted">Employee ID</td><td>{{ employee.employee_id or '—' }}</td></tr>
+            <tr><td class="text-muted">User ID</td><td>{{ employee.user_id }}</td></tr>
+          </table>
+        </div>
+
+        <div class="card p-4">
+          <h6 class="fw-semibold mb-3">Enrolment Status</h6>
+          <div class="text-center py-2">
+            <div class="snap-count" id="enrolledCount">{{ enrolled_count }}</div>
+            <div class="text-muted" style="font-size:.875rem;">images enrolled</div>
+          </div>
+          <hr>
+          <p class="text-muted mb-2" style="font-size:.8rem;">
+            <i class="bi bi-info-circle me-1"></i>
+            Capture at least <strong>5–10 images</strong> from slightly different angles
+            for reliable recognition.
+          </p>
+          <div class="progress" style="height:8px;">
+            <div class="progress-bar bg-success" id="progressBar"
+                 style="width: {{ enrol_pct }}%"></div>
+          </div>
+          <div class="mt-2" style="font-size:.8rem;color:#6c757d;" id="progressLabel">
+            {% if enrolled_count >= 10 %}
+              <span class="text-success"><i class="bi bi-check-circle me-1"></i>Enrolment complete</span>
+            {% elif enrolled_count >= 5 %}
+              <span class="text-warning"><i class="bi bi-exclamation-circle me-1"></i>Minimum met — more images improve accuracy</span>
+            {% else %}
+              <span class="text-danger"><i class="bi bi-x-circle me-1"></i>Need at least 5 images</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+<script>
+  const video    = document.getElementById('videoBox');
+  const canvas   = document.getElementById('canvas');
+  const btnStart = document.getElementById('btnStart');
+  const btnSnap  = document.getElementById('btnSnap');
+  const btnStop  = document.getElementById('btnStop');
+  const snapMsg  = document.getElementById('snapMsg');
+  const countEl  = document.getElementById('enrolledCount');
+  const progBar  = document.getElementById('progressBar');
+  const progLabel= document.getElementById('progressLabel');
+  let stream     = null;
+
+  btnStart.addEventListener('click', async () => {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      video.srcObject = stream;
+      btnStart.disabled = true;
+      btnSnap.disabled  = false;
+      btnStop.disabled  = false;
+      snapMsg.textContent = 'Camera ready. Position the employee\'s face and click Capture.';
+    } catch (err) {
+      snapMsg.textContent = 'Camera access denied: ' + err.message;
+      snapMsg.style.color = '#dc3545';
+    }
+  });
+
+  btnStop.addEventListener('click', () => {
+    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+    video.srcObject = null;
+    btnStart.disabled = false;
+    btnSnap.disabled  = true;
+    btnStop.disabled  = true;
+    snapMsg.textContent = 'Camera stopped.';
+  });
+
+  btnSnap.addEventListener('click', async () => {
+    canvas.width  = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+    btnSnap.disabled = true;
+    snapMsg.textContent = 'Saving image…';
+    snapMsg.style.color = '#6c757d';
+
+    try {
+      const resp = await fetch('{{ url_for("admin.enrol_face", user_id=employee.user_id) }}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+        },
+        body: JSON.stringify({ image: dataUrl })
+      });
+      const data = await resp.json();
+      if (data.ok) {
+        const n = data.enrolled_count;
+        countEl.textContent = n;
+        progBar.style.width = Math.min(n * 10, 100) + '%';
+        snapMsg.textContent = data.message || 'Saved!';
+        snapMsg.style.color = '#198754';
+        updateProgressLabel(n);
+      } else {
+        snapMsg.textContent = data.message || 'Save failed.';
+        snapMsg.style.color = '#dc3545';
+      }
+    } catch (err) {
+      snapMsg.textContent = 'Network error: ' + err.message;
+      snapMsg.style.color = '#dc3545';
+    } finally {
+      btnSnap.disabled = false;
+    }
+  });
+
+  function updateProgressLabel(n) {
+    if (n >= 10) {
+      progLabel.innerHTML = '<span class="text-success"><i class="bi bi-check-circle me-1"></i>Enrolment complete</span>';
+    } else if (n >= 5) {
+      progLabel.innerHTML = '<span class="text-warning"><i class="bi bi-exclamation-circle me-1"></i>Minimum met — more images improve accuracy</span>';
+    } else {
+      progLabel.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle me-1"></i>Need at least 5 images</span>';
+    }
+  }
+</script>
+</body>
+</html>
